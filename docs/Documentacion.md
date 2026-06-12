@@ -107,6 +107,8 @@ Hoja Errores: Lote, Identificador Original, Identificador Normalizado, Estado, T
 
 La exportacion desde dashboard debe respetar filtros aplicados.
 
+Exportacion de validacion previa: el usuario puede exportar el preview de carga antes de crear lote. El archivo incluye hojas `Validos`, `Duplicados`, `Invalidos` y `Resumen`.
+
 ## Arquitectura
 
 Frontend: React + Vite + TypeScript. Auth y datos: Supabase. Deploy web/API liviana: Vercel. Worker largo o persistente: Railway si el volumen/pausas lo justifican. El worker debe quedar desacoplado para poder mover procesamiento sin rehacer dashboard.
@@ -120,12 +122,14 @@ Se adelanto desarrollo que no depende de Supabase ni despliegue:
 - Interfaz `BatchRepository` con implementacion local para preparar el reemplazo futuro por Supabase.
 - Carga real de archivos `.xlsx`, `.xls`, `.csv`, `.txt` y `.tsv` en modo local.
 - Preview de carga con validos, duplicados, invalidos y truncamiento por limite de 100 registros.
+- Exportacion Excel del preview de carga con hojas `Validos`, `Duplicados`, `Invalidos` y `Resumen`.
 - Cola local con progreso, cancelacion, reintento de fallidos y maximo de 10 intentos por item.
 - Filtros ampliados por busqueda, estado, puerto y rango de fechas.
 - Panel admin demo con usuarios y logs tecnicos para preparar permisos por rol.
 - Exportacion Excel aislada en modulo propio para facilitar pruebas y conexion posterior.
 - Pruebas unitarias adicionales de validacion, importacion y motor de lote.
 - Pruebas iniciales de componentes para cabecera, preview de carga, tabla y modal de detalle.
+- Prueba de workbook para exportacion Excel del preview.
 - Mejoras iniciales de accesibilidad en navegacion, botones iconicos, estados vacios y modal de detalle.
 
 Este avance mantiene modo demo y no reemplaza la integracion real pendiente con Supabase, worker y Aduanas. Los pasos externos estan documentados en `docs/Pendientes-infraestructura.md`.
