@@ -1,4 +1,4 @@
-import React, { act } from "react";
+import { act, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createRoot, type Root } from "react-dom/client";
 import { Header } from "./Header";
@@ -11,7 +11,7 @@ import type { BlBatch, BlItem } from "../lib/types";
 let root: Root | null = null;
 let container: HTMLDivElement | null = null;
 
-function render(ui: React.ReactNode) {
+function render(ui: ReactNode) {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
