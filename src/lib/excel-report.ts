@@ -112,7 +112,9 @@ function applyWorkbookFormatting(workbook: ExcelJS.Workbook): void {
     worksheet.views = [{ state: "frozen", ySplit: 1 }];
     worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
     worksheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A5F" } };
-    worksheet.autoFilter = worksheet.rowCount > 1 ? { from: "A1", to: `${worksheet.getColumn(worksheet.columnCount).letter}1` } : undefined;
+    if (worksheet.rowCount > 1) {
+      worksheet.autoFilter = { from: "A1", to: `${worksheet.getColumn(worksheet.columnCount).letter}1` };
+    }
   });
 }
 
