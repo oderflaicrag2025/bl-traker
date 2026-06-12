@@ -125,6 +125,8 @@ Se adelanto desarrollo que no depende de Supabase ni despliegue:
 - Panel admin demo con usuarios y logs tecnicos para preparar permisos por rol.
 - Exportacion Excel aislada en modulo propio para facilitar pruebas y conexion posterior.
 - Pruebas unitarias adicionales de validacion, importacion y motor de lote.
+- Pruebas iniciales de componentes para cabecera, preview de carga, tabla y modal de detalle.
+- Mejoras iniciales de accesibilidad en navegacion, botones iconicos, estados vacios y modal de detalle.
 
 Este avance mantiene modo demo y no reemplaza la integracion real pendiente con Supabase, worker y Aduanas. Los pasos externos estan documentados en `docs/Pendientes-infraestructura.md`.
 
