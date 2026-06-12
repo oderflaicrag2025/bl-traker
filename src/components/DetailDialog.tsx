@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { X } from "lucide-react";
 import { formatNumber } from "../lib/format";
 import type { BlItem } from "../lib/types";
@@ -20,12 +21,20 @@ export function DetailDialog({ item, close }: { item: BlItem; close: () => void 
     ["Error", item.ultimoError]
   ];
 
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") close();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [close]);
+
   return (
-    <div className="detail-dialog">
+    <div className="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-dialog-title">
       <div className="detail-panel">
         <div className="panel-header">
-          <div><p className="panel-title">Detalle de consulta</p><p className="panel-subtitle">{item.identificadorNormalizado}</p></div>
-          <button className="btn btn-secondary" type="button" onClick={close}><X size={16} /></button>
+          <div><p className="panel-title" id="detail-dialog-title">Detalle de consulta</p><p className="panel-subtitle">{item.identificadorNormalizado}</p></div>
+          <button className="btn btn-secondary" type="button" onClick={close} aria-label="Cerrar detalle"><X size={16} aria-hidden="true" /></button>
         </div>
         <div className="panel-body detail-grid">
           {rows.map(([label, value]) => <div className="detail-item" key={label}><span>{label}</span><strong>{value || "-"}</strong></div>)}
