@@ -111,6 +111,21 @@ La exportacion desde dashboard debe respetar filtros aplicados.
 
 Frontend: React + Vite + TypeScript. Auth y datos: Supabase. Deploy web/API liviana: Vercel. Worker largo o persistente: Railway si el volumen/pausas lo justifican. El worker debe quedar desacoplado para poder mover procesamiento sin rehacer dashboard.
 
+## Avance sin infraestructura - 2026-06-12
+
+Se adelanto desarrollo que no depende de Supabase ni despliegue:
+
+- Separacion modular de tipos, validacion, importacion, cola local, formato, exportacion y datos demo.
+- Carga real de archivos `.xlsx`, `.xls`, `.csv`, `.txt` y `.tsv` en modo local.
+- Preview de carga con validos, duplicados, invalidos y truncamiento por limite de 100 registros.
+- Cola local con progreso, cancelacion, reintento de fallidos y maximo de 10 intentos por item.
+- Filtros ampliados por busqueda, estado, puerto y rango de fechas.
+- Panel admin demo con usuarios y logs tecnicos para preparar permisos por rol.
+- Exportacion Excel aislada en modulo propio para facilitar pruebas y conexion posterior.
+- Pruebas unitarias adicionales de validacion, importacion y motor de lote.
+
+Este avance mantiene modo demo y no reemplaza la integracion real pendiente con Supabase, worker y Aduanas.
+
 ## Criterios de aceptacion MVP
 
 - Usuario autorizado puede iniciar sesion.
