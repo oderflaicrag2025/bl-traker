@@ -4,7 +4,7 @@ import type { BlItem } from "../lib/types";
 
 export function DetailDialog({ item, close }: { item: BlItem; close: () => void }) {
   const result = item.resultado;
-  const rows = [
+  const rows: Array<[string, string | undefined]> = [
     ["Nro BL", result?.nroBl ?? item.identificadorNormalizado],
     ["Nro Manifiesto", result?.nroManifesto],
     ["Nave", result?.nave],
@@ -25,7 +25,7 @@ export function DetailDialog({ item, close }: { item: BlItem; close: () => void 
       <div className="detail-panel">
         <div className="panel-header">
           <div><p className="panel-title">Detalle de consulta</p><p className="panel-subtitle">{item.identificadorNormalizado}</p></div>
-          <button className="btn btn-secondary" onClick={close}><X size={16} /></button>
+          <button className="btn btn-secondary" type="button" onClick={close}><X size={16} /></button>
         </div>
         <div className="panel-body detail-grid">
           {rows.map(([label, value]) => <div className="detail-item" key={label}><span>{label}</span><strong>{value || "-"}</strong></div>)}
