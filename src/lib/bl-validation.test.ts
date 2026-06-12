@@ -13,10 +13,16 @@ describe("BL validation", () => {
     expect(parsed.invalidRows).toHaveLength(1);
   });
 
+  it("marks duplicates against current valid results", () => {
+    const parsed = parseBlInput("MEDUWU951960\nMAEU269371924", new Set(["MEDUWU951960"]));
+    expect(parsed.validRows.map((row) => row.normalized)).toEqual(["MAEU269371924"]);
+    expect(parsed.duplicateRows[0].reason).toBe("Ya existe resultado vigente");
+  });
+
   it("enforces the initial MVP batch limit", () => {
     const raw = Array.from({ length: MAX_BATCH_SIZE + 3 }, (_, index) => `BL${index}ABC`).join("\n");
     const parsed = parseBlInput(raw);
     expect(parsed.truncated).toBe(true);
-    expect(parsed.allRows).toHaveLength(MAX_BATCH_SIZE);
+    expect(parsed.rows).toHaveLength(MAX_BATCH_SIZE);
   });
 });
