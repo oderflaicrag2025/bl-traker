@@ -56,6 +56,7 @@ Copia `.env.example` y completa segun el entorno:
 
 - `docs/Documentacion.md`: alcance canonico del proyecto.
 - `docs/Validacion-local.md`: pasos para instalar, compilar, probar y validar fuera del entorno del agente.
+- `docs/Backlog-sin-infraestructura.md`: proximos avances posibles sin Supabase, despliegue ni worker real.
 
 ## Modulos principales
 
