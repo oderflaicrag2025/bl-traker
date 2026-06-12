@@ -34,6 +34,13 @@ Este backlog lista trabajo que todavia se puede adelantar desde el repo sin depe
    - Estado vacio anunciable en tabla.
    - Modal con `role="dialog"`, `aria-modal` y cierre por teclado.
 
+5. Exportacion Excel del preview de carga.
+   - Hoja `Validos`.
+   - Hoja `Duplicados`.
+   - Hoja `Invalidos`.
+   - Hoja `Resumen`.
+   - Prueba de workbook generado.
+
 ## Prioridad 1 - Calidad del frontend demo
 
 1. Ampliar pruebas de componentes.
@@ -67,12 +74,7 @@ Este backlog lista trabajo que todavia se puede adelantar desde el repo sin depe
 
 ## Prioridad 3 - Exportacion y reportes
 
-1. Agregar exportacion de preview de carga.
-   - Hoja `Validos`.
-   - Hoja `Duplicados`.
-   - Hoja `Invalidos`.
-
-2. Mejorar Excel de resultados.
+1. Mejorar Excel de resultados.
    - Filtros activados en encabezados.
    - Ancho de columnas ajustado.
    - Formato numerico para peso.
@@ -119,4 +121,4 @@ Este backlog lista trabajo que todavia se puede adelantar desde el repo sin depe
 
 ## Siguiente bloque recomendado
 
-El siguiente avance mas rentable sin infraestructura es agregar exportacion Excel del preview de carga o fortalecer el parser con mas escenarios sinteticos mientras no existan los HTML reales completos.
+El siguiente avance mas rentable sin infraestructura es mejorar el Excel de resultados con hoja `Resumen`, auto-filtros y formato numerico, o fortalecer el parser con mas escenarios sinteticos mientras no existan los HTML reales completos.
