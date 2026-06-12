@@ -10,7 +10,7 @@ interface BlTableProps {
 }
 
 export function BlTable({ rows, select, retry }: BlTableProps) {
-  if (!rows.length) return <div className="empty">No hay BL para mostrar.</div>;
+  if (!rows.length) return <div className="empty" role="status">No hay BL para mostrar.</div>;
 
   return (
     <div className="table-wrap">
@@ -35,8 +35,8 @@ export function BlTable({ rows, select, retry }: BlTableProps) {
               <td>{formatNumber(item.resultado?.totalPeso)}</td>
               <td>{item.intentoActual}/{item.maxIntentos}</td>
               <td>
-                <button className="row-action" onClick={() => select(item)}>Ver detalle</button>
-                {item.ultimoError && <button className="row-action" onClick={() => retry(item)}><RotateCcw size={14} /></button>}
+                <button className="row-action" type="button" onClick={() => select(item)}>Ver detalle</button>
+                {item.ultimoError && <button className="row-action" type="button" aria-label={`Reintentar ${item.identificadorNormalizado}`} onClick={() => retry(item)}><RotateCcw size={14} aria-hidden="true" /></button>}
               </td>
             </tr>
           ))}
