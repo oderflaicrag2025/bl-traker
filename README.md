@@ -6,18 +6,21 @@ La documentacion canonica del alcance del proyecto esta en `docs/Documentacion.m
 
 ## Estado actual
 
-Este repo contiene una primera implementacion funcional del MVP:
+Este repo contiene una implementacion funcional adelantada del MVP sin depender todavia de Supabase ni despliegue:
 
 - Dashboard React + Vite + TypeScript inspirado visualmente en `Kpo-services/port-eta-dashboard`.
-- Carga de BL por pegado manual o archivo CSV/TXT.
-- Validacion de formato, duplicados y limite inicial de 100 registros por lote.
+- Modo demo local para trabajar sin infraestructura.
+- Carga de BL por pegado manual, CSV, TXT, TSV y Excel `.xlsx/.xls`.
+- Preview de carga con registros validos, duplicados, invalidos y limite inicial de 100 registros por lote.
 - Creacion de lote e inicio manual de procesamiento.
-- Procesamiento secuencial demo con estados por item, reintentos y errores 403/sin resultado.
-- Tabla filtrable por BL, manifiesto, nave, puerto y estado.
+- Cola local con progreso, cancelacion, reintento de fallidos y maximo de 10 intentos por item.
+- Procesamiento secuencial demo con estados por item, errores 403/sin resultado y agotamiento por reintentos.
+- Tabla filtrable por BL, manifiesto, nave, puerto, estado y rango de fechas.
 - Detalle por registro.
+- Panel admin demo con usuarios y logs tecnicos visibles para preparar el flujo de roles.
 - Exportacion Excel con hoja de resultados y hoja de errores.
 - Parser maritimo inicial para HTML de Aduanas.
-- Fixtures y pruebas unitarias para parser y validacion.
+- Fixtures y pruebas unitarias para parser, validacion, importacion y motor de cola.
 - Schema inicial de Supabase con RLS, roles y tablas principales.
 - Worker de referencia en `supabase/functions/process-bl-batch`.
 
@@ -45,6 +48,16 @@ Copia `.env.example` y completa segun el entorno:
 | `VITE_AUTH_MODE` | `demo` para desarrollo sin Supabase, `supabase` para Auth real. |
 | `VITE_PROCESSING_PAUSE_MS` | Pausa visual/demo entre items. En produccion debe controlarla el worker. |
 
+## Modulos principales
+
+- `src/App.tsx`: composicion de pantallas demo.
+- `src/lib/types.ts`: tipos del dominio.
+- `src/lib/bl-validation.ts`: normalizacion, validacion y preview de BL.
+- `src/lib/file-import.ts`: lectura de CSV/TXT/TSV/Excel.
+- `src/lib/batch-engine.ts`: cola local, totales, cancelacion y reintentos.
+- `src/lib/excel-report.ts`: exportacion Excel.
+- `src/lib/aduanas-parser.ts`: parser HTML maritimo inicial.
+
 ## Supabase
 
 El schema inicial esta en `supabase/migrations/001_initial_schema.sql` e incluye:
@@ -61,6 +74,7 @@ El schema inicial esta en `supabase/migrations/001_initial_schema.sql` e incluye
 
 - Conectar procesamiento real contra Aduanas desde un worker controlado.
 - Leer `CON_ConsultaGralMFTOpageCode` dinamicamente antes de consultar.
+- Reemplazar el almacenamiento demo/local por Supabase.
 - Definir red/ubicacion final del worker y validar causa de 403 con y sin VPN.
 - Definir presupuesto mensual antes de activar Railway en produccion.
 - Activar limpieza diaria de `errores_consulta` y `logs_html_consulta`.
