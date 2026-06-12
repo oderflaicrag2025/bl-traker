@@ -116,6 +116,8 @@ Frontend: React + Vite + TypeScript. Auth y datos: Supabase. Deploy web/API livi
 Se adelanto desarrollo que no depende de Supabase ni despliegue:
 
 - Separacion modular de tipos, validacion, importacion, cola local, formato, exportacion y datos demo.
+- Separacion de `src/App.tsx` en componentes fisicos para login, cabecera, carga, filtros, tabla, cola, admin, detalle, fuentes y resumen.
+- Interfaz `BatchRepository` con implementacion local para preparar el reemplazo futuro por Supabase.
 - Carga real de archivos `.xlsx`, `.xls`, `.csv`, `.txt` y `.tsv` en modo local.
 - Preview de carga con validos, duplicados, invalidos y truncamiento por limite de 100 registros.
 - Cola local con progreso, cancelacion, reintento de fallidos y maximo de 10 intentos por item.
@@ -124,7 +126,7 @@ Se adelanto desarrollo que no depende de Supabase ni despliegue:
 - Exportacion Excel aislada en modulo propio para facilitar pruebas y conexion posterior.
 - Pruebas unitarias adicionales de validacion, importacion y motor de lote.
 
-Este avance mantiene modo demo y no reemplaza la integracion real pendiente con Supabase, worker y Aduanas.
+Este avance mantiene modo demo y no reemplaza la integracion real pendiente con Supabase, worker y Aduanas. Los pasos externos estan documentados en `docs/Pendientes-infraestructura.md`.
 
 ## Criterios de aceptacion MVP
 
