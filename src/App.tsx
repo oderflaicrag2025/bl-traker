@@ -13,7 +13,7 @@ import { Login } from "./components/Login";
 import { parseBlInput } from "./lib/bl-validation";
 import { cancelBatch, createBatchFromRows, filterItems, resetItemForRetry, resolveDemoItem, withBatchTotals } from "./lib/batch-engine";
 import { sourceHealth } from "./lib/demo-data";
-import { downloadBlob, generateBlExcel } from "./lib/excel-report";
+import { downloadBlob, generateBlExcel, generatePreviewExcel } from "./lib/excel-report";
 import { todayBatchName } from "./lib/format";
 import { parseUploadFile } from "./lib/file-import";
 import { localBatchRepository } from "./lib/batch-repository";
@@ -80,6 +80,13 @@ export function App() {
     notify(`Lote creado con ${batch.items.length} BL validos.`);
   }
 
+  async function exportPreviewExcel() {
+    if (!preview.rows.length) return notify("No hay validacion previa para exportar.");
+    const { blob, fileName } = await generatePreviewExcel(preview);
+    downloadBlob(blob, fileName);
+    notify(`Preview exportado: ${fileName}`);
+  }
+
   async function processBatch(batchId?: string) {
     const candidate = batches.find((batch) => batch.id === batchId) ?? batches.find((batch) => ["validado", "en_cola", "completado_con_errores"].includes(batch.estado));
     if (!candidate) return notify("No hay lote validado para procesar.");
@@ -139,7 +146,7 @@ export function App() {
         <SourceStrip sources={sourceHealth} />
         <Summary items={allItems} />
         {view === "dashboard" && <>
-          <UploadPanel raw={raw} preview={preview} batchName={batchName} setBatchName={setBatchName} onRaw={updateRaw} onFile={handleFile} onCreate={createBatch} />
+          <UploadPanel raw={raw} preview={preview} batchName={batchName} setBatchName={setBatchName} onRaw={updateRaw} onFile={handleFile} onCreate={createBatch} onExportPreview={exportPreviewExcel} />
           <FiltersBar filters={filters} setFilters={setFilters} total={allItems.length} filtered={filtered.length} />
           <section className="panel">
             <div className="panel-header">
