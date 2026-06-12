@@ -2,24 +2,35 @@
 
 Este backlog lista trabajo que todavia se puede adelantar desde el repo sin depender de Supabase, Vercel, Railway ni acceso real a Aduanas.
 
-## Prioridad 1 - Calidad del frontend demo
+## Completado - 2026-06-12
 
-1. Separar `src/App.tsx` en componentes fisicos.
+1. Separacion de `src/App.tsx` en componentes fisicos ya iniciada y conectada.
    - `components/Header.tsx`
+   - `components/Login.tsx`
    - `components/UploadPanel.tsx`
    - `components/FiltersBar.tsx`
    - `components/BlTable.tsx`
    - `components/QueueView.tsx`
    - `components/AdminView.tsx`
    - `components/DetailDialog.tsx`
+   - `components/SourceStrip.tsx`
+   - `components/Summary.tsx`
 
-2. Agregar pruebas de componentes principales.
+2. Interfaz de repositorio local creada.
+   - `src/lib/batch-repository.ts`
+   - `BatchRepository`
+   - `LocalBatchRepository`
+   - punto de reemplazo futuro para `SupabaseBatchRepository`
+
+## Prioridad 1 - Calidad del frontend demo
+
+1. Agregar pruebas de componentes principales.
    - Render de dashboard en modo demo.
    - Preview de carga.
    - Tabla vacia y tabla con resultados.
    - Vista cola con lote procesando/cancelado.
 
-3. Mejorar accesibilidad.
+2. Mejorar accesibilidad.
    - Labels explicitos.
    - `aria-label` en botones iconicos.
    - Estados de carga y error anunciables.
@@ -59,18 +70,13 @@ Este backlog lista trabajo que todavia se puede adelantar desde el repo sin depe
 
 ## Prioridad 4 - Preparacion para Supabase
 
-1. Crear interfaz de repositorio de datos.
-   - `BatchRepository`
-   - Implementacion `LocalBatchRepository`
-   - Futuro `SupabaseBatchRepository`
-
-2. Mapear nombres frontend a columnas Supabase.
+1. Mapear nombres frontend a columnas Supabase.
    - `BlBatch` <-> `lotes_consulta`
    - `BlItem` <-> `items_consulta`
    - `AduanaResult` <-> `resultados_aduana`
    - `ConsultationError` <-> `errores_consulta`
 
-3. Agregar pruebas de mapping.
+2. Agregar pruebas de mapping.
    - Sin conectar Supabase real.
    - Solo transformaciones de objetos.
 
@@ -103,4 +109,4 @@ Este backlog lista trabajo que todavia se puede adelantar desde el repo sin depe
 
 ## Siguiente bloque recomendado
 
-El siguiente avance mas rentable es separar `App.tsx` en componentes fisicos y crear una interfaz `BatchRepository`. Eso deja el proyecto listo para cambiar de almacenamiento local a Supabase sin redisenar la UI.
+El siguiente avance mas rentable sin infraestructura es agregar pruebas de componentes principales y mejorar accesibilidad del modal, botones iconicos y estados de carga/error. Despues conviene fortalecer parser y fixtures cuando existan los HTML reales completos.
