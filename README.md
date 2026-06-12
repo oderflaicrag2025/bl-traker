@@ -13,6 +13,7 @@ Este repo contiene una implementacion funcional adelantada del MVP sin depender 
 - Persistencia local de lotes demo en `localStorage` para conservar historial entre recargas.
 - Carga de BL por pegado manual, CSV, TXT, TSV y Excel `.xlsx/.xls`.
 - Preview de carga con registros validos, duplicados, invalidos y limite inicial de 100 registros por lote.
+- Exportacion Excel del preview de carga con hojas `Validos`, `Duplicados`, `Invalidos` y `Resumen`.
 - Creacion de lote e inicio manual de procesamiento.
 - Cola local con progreso, cancelacion, reintento de fallidos y maximo de 10 intentos por item.
 - Procesamiento secuencial demo con estados por item, errores 403/sin resultado y agotamiento por reintentos.
@@ -21,7 +22,7 @@ Este repo contiene una implementacion funcional adelantada del MVP sin depender 
 - Panel admin demo con usuarios y logs tecnicos visibles para preparar el flujo de roles.
 - Exportacion Excel con hoja de resultados y hoja de errores.
 - Parser maritimo inicial para HTML de Aduanas.
-- Fixtures y pruebas unitarias para parser, validacion, importacion y motor de cola.
+- Fixtures y pruebas unitarias para parser, validacion, importacion, motor de cola, componentes y exportacion del preview.
 - Schema inicial de Supabase con RLS, roles y tablas principales.
 - Worker de referencia en `supabase/functions/process-bl-batch`.
 - Workflow CI en `.github/workflows/ci.yml` para build y tests.
@@ -68,7 +69,7 @@ Copia `.env.example` y completa segun el entorno:
 - `src/lib/file-import.ts`: lectura de CSV/TXT/TSV/Excel.
 - `src/lib/batch-engine.ts`: cola local, totales, cancelacion y reintentos.
 - `src/lib/batch-repository.ts`: abstraccion para cambiar localStorage por Supabase.
-- `src/lib/excel-report.ts`: exportacion Excel.
+- `src/lib/excel-report.ts`: exportacion Excel de resultados y preview de carga.
 - `src/lib/local-store.ts`: persistencia local temporal para modo demo.
 - `src/lib/aduanas-parser.ts`: parser HTML maritimo inicial.
 
