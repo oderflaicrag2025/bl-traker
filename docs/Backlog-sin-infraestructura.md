@@ -22,19 +22,29 @@ Este backlog lista trabajo que todavia se puede adelantar desde el repo sin depe
    - `LocalBatchRepository`
    - punto de reemplazo futuro para `SupabaseBatchRepository`
 
-## Prioridad 1 - Calidad del frontend demo
-
-1. Agregar pruebas de componentes principales.
-   - Render de dashboard en modo demo.
+3. Pruebas iniciales de componentes principales sin dependencias nuevas.
+   - Header con navegacion activa.
    - Preview de carga.
    - Tabla vacia y tabla con resultados.
-   - Vista cola con lote procesando/cancelado.
+   - Modal de detalle con cierre por Escape.
 
-2. Mejorar accesibilidad.
-   - Labels explicitos.
-   - `aria-label` en botones iconicos.
-   - Estados de carga y error anunciables.
-   - Navegacion por teclado en modal de detalle.
+4. Mejoras iniciales de accesibilidad.
+   - `aria-label` en botones iconicos principales.
+   - `aria-current` en navegacion activa.
+   - Estado vacio anunciable en tabla.
+   - Modal con `role="dialog"`, `aria-modal` y cierre por teclado.
+
+## Prioridad 1 - Calidad del frontend demo
+
+1. Ampliar pruebas de componentes.
+   - Vista cola con lote procesando/cancelado.
+   - Vista admin con logs tecnicos.
+   - Flujo de click para detalle y reintento.
+
+2. Completar accesibilidad.
+   - Foco inicial en modal de detalle.
+   - Retorno de foco al cerrar modal.
+   - Revision de contraste y nombres accesibles en controles restantes.
 
 ## Prioridad 2 - Parser y fixtures
 
@@ -109,4 +119,4 @@ Este backlog lista trabajo que todavia se puede adelantar desde el repo sin depe
 
 ## Siguiente bloque recomendado
 
-El siguiente avance mas rentable sin infraestructura es agregar pruebas de componentes principales y mejorar accesibilidad del modal, botones iconicos y estados de carga/error. Despues conviene fortalecer parser y fixtures cuando existan los HTML reales completos.
+El siguiente avance mas rentable sin infraestructura es agregar exportacion Excel del preview de carga o fortalecer el parser con mas escenarios sinteticos mientras no existan los HTML reales completos.
