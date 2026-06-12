@@ -13,7 +13,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
           <div className="panel-body grid">
             <label className="field"><span>Correo</span><input className="input" defaultValue="admin@kposervices.cl" /></label>
             <label className="field"><span>Contrasena</span><input className="input" type="password" placeholder="Demo: puedes entrar sin clave" /></label>
-            <button className="btn btn-primary" onClick={onLogin}>Iniciar sesion</button>
+            <button className="btn btn-primary" type="button" onClick={onLogin}>Iniciar sesion</button>
             <div className="alert"><strong>Registro cerrado</strong><span>Las cuentas nuevas deben ser creadas por un administrador.</span></div>
           </div>
         </div>
