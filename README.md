@@ -10,6 +10,7 @@ Este repo contiene una implementacion funcional adelantada del MVP sin depender 
 
 - Dashboard React + Vite + TypeScript inspirado visualmente en `Kpo-services/port-eta-dashboard`.
 - Modo demo local para trabajar sin infraestructura.
+- Persistencia local de lotes demo en `localStorage` para conservar historial entre recargas.
 - Carga de BL por pegado manual, CSV, TXT, TSV y Excel `.xlsx/.xls`.
 - Preview de carga con registros validos, duplicados, invalidos y limite inicial de 100 registros por lote.
 - Creacion de lote e inicio manual de procesamiento.
@@ -23,6 +24,7 @@ Este repo contiene una implementacion funcional adelantada del MVP sin depender 
 - Fixtures y pruebas unitarias para parser, validacion, importacion y motor de cola.
 - Schema inicial de Supabase con RLS, roles y tablas principales.
 - Worker de referencia en `supabase/functions/process-bl-batch`.
+- Workflow CI en `.github/workflows/ci.yml` para build y tests.
 
 ## Stack
 
@@ -37,6 +39,8 @@ npm run build
 npm test
 ```
 
+Si el entorno bloquea npm o devuelve `403 Forbidden`, seguir `docs/Validacion-local.md`.
+
 ## Variables de entorno
 
 Copia `.env.example` y completa segun el entorno:
@@ -48,6 +52,11 @@ Copia `.env.example` y completa segun el entorno:
 | `VITE_AUTH_MODE` | `demo` para desarrollo sin Supabase, `supabase` para Auth real. |
 | `VITE_PROCESSING_PAUSE_MS` | Pausa visual/demo entre items. En produccion debe controlarla el worker. |
 
+## Documentos utiles
+
+- `docs/Documentacion.md`: alcance canonico del proyecto.
+- `docs/Validacion-local.md`: pasos para instalar, compilar, probar y validar fuera del entorno del agente.
+
 ## Modulos principales
 
 - `src/App.tsx`: composicion de pantallas demo.
@@ -56,6 +65,7 @@ Copia `.env.example` y completa segun el entorno:
 - `src/lib/file-import.ts`: lectura de CSV/TXT/TSV/Excel.
 - `src/lib/batch-engine.ts`: cola local, totales, cancelacion y reintentos.
 - `src/lib/excel-report.ts`: exportacion Excel.
+- `src/lib/local-store.ts`: persistencia local temporal para modo demo.
 - `src/lib/aduanas-parser.ts`: parser HTML maritimo inicial.
 
 ## Supabase
