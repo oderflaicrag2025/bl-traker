@@ -1,4 +1,4 @@
-import { FileSpreadsheet, Plus } from "lucide-react";
+import { Download, FileSpreadsheet, Plus } from "lucide-react";
 import { MAX_BATCH_SIZE } from "../lib/bl-validation";
 import type { UploadPreview } from "../lib/types";
 
@@ -10,9 +10,10 @@ interface UploadPanelProps {
   onRaw: (value: string) => void;
   onFile: (file?: File) => void | Promise<void>;
   onCreate: () => void;
+  onExportPreview: () => void | Promise<void>;
 }
 
-export function UploadPanel({ raw, preview, batchName, setBatchName, onRaw, onFile, onCreate }: UploadPanelProps) {
+export function UploadPanel({ raw, preview, batchName, setBatchName, onRaw, onFile, onCreate, onExportPreview }: UploadPanelProps) {
   return (
     <section className="panel">
       <div className="panel-header">
@@ -21,7 +22,7 @@ export function UploadPanel({ raw, preview, batchName, setBatchName, onRaw, onFi
           <p className="panel-subtitle">Pegado manual, CSV/TXT o Excel. Limite inicial: {MAX_BATCH_SIZE} registros por lote.</p>
         </div>
         <button className="btn btn-primary" type="button" onClick={onCreate} disabled={!preview.validRows.length}>
-          <Plus size={16} />Crear lote
+          <Plus size={16} aria-hidden="true" />Crear lote
         </button>
       </div>
       <div className="panel-body upload-grid">
@@ -34,10 +35,15 @@ export function UploadPanel({ raw, preview, batchName, setBatchName, onRaw, onFi
             <span>BLs</span>
             <textarea className="textarea" value={raw} onChange={(event) => onRaw(event.target.value)} placeholder="Un BL por linea o separados por coma" />
           </label>
-          <label className="btn btn-secondary file-button">
-            <FileSpreadsheet size={16} />Cargar Excel/CSV/TXT
-            <input type="file" hidden accept=".xlsx,.xls,.csv,.txt,.tsv" onChange={(event) => void onFile(event.target.files?.[0])} />
-          </label>
+          <div className="upload-actions">
+            <label className="btn btn-secondary file-button">
+              <FileSpreadsheet size={16} aria-hidden="true" />Cargar Excel/CSV/TXT
+              <input type="file" hidden accept=".xlsx,.xls,.csv,.txt,.tsv" onChange={(event) => void onFile(event.target.files?.[0])} />
+            </label>
+            <button className="btn btn-secondary" type="button" onClick={() => void onExportPreview()} disabled={!preview.rows.length} aria-label="Exportar validacion previa a Excel">
+              <Download size={16} aria-hidden="true" />Exportar preview
+            </button>
+          </div>
         </div>
         <PreviewCard preview={preview} />
       </div>
