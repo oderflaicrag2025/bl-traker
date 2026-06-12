@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import type { BlItem } from "./types";
+import type { BlItem, UploadPreview, UploadPreviewRow } from "./types";
 
 export async function generateBlExcel(items: BlItem[]): Promise<{ blob: Blob; fileName: string }> {
   const workbook = new ExcelJS.Workbook();
@@ -57,15 +57,73 @@ export async function generateBlExcel(items: BlItem[]): Promise<{ blob: Blob; fi
     }));
   }
 
+  applyWorkbookFormatting(workbook);
+  return workbookToDownload(workbook, `KPO_BL_Tracker_${todayStamp()}.xlsx`);
+}
+
+export async function generatePreviewExcel(preview: UploadPreview): Promise<{ blob: Blob; fileName: string }> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "KPO BL Tracker";
+  workbook.created = new Date();
+
+  addPreviewSheet(workbook, "Validos", preview.validRows);
+  addPreviewSheet(workbook, "Duplicados", preview.duplicateRows);
+  addPreviewSheet(workbook, "Invalidos", preview.invalidRows);
+
+  const summary = workbook.addWorksheet("Resumen");
+  summary.columns = [
+    { header: "Categoria", key: "categoria", width: 24 },
+    { header: "Total", key: "total", width: 14 }
+  ];
+  summary.addRows([
+    { categoria: "Validos", total: preview.validRows.length },
+    { categoria: "Duplicados", total: preview.duplicateRows.length },
+    { categoria: "Invalidos", total: preview.invalidRows.length },
+    { categoria: "Total revisado", total: preview.rows.length },
+    { categoria: "Truncado por limite", total: preview.truncated ? "Si" : "No" }
+  ]);
+
+  applyWorkbookFormatting(workbook);
+  return workbookToDownload(workbook, `KPO_BL_Preview_${todayStamp()}.xlsx`);
+}
+
+function addPreviewSheet(workbook: ExcelJS.Workbook, name: string, rows: UploadPreviewRow[]): void {
+  const sheet = workbook.addWorksheet(name);
+  sheet.columns = [
+    { header: "Posicion", key: "position", width: 12 },
+    { header: "Original", key: "original", width: 28 },
+    { header: "Normalizado", key: "normalized", width: 28 },
+    { header: "Valido", key: "valid", width: 12 },
+    { header: "Duplicado", key: "duplicated", width: 14 },
+    { header: "Motivo", key: "reason", width: 36 }
+  ];
+  rows.forEach((row) => sheet.addRow({
+    position: row.position,
+    original: row.original,
+    normalized: row.normalized,
+    valid: row.valid ? "Si" : "No",
+    duplicated: row.duplicated ? "Si" : "No",
+    reason: row.reason ?? "Listo para lote"
+  }));
+}
+
+function applyWorkbookFormatting(workbook: ExcelJS.Workbook): void {
   workbook.worksheets.forEach((worksheet) => {
     worksheet.views = [{ state: "frozen", ySplit: 1 }];
     worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
     worksheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A5F" } };
+    worksheet.autoFilter = worksheet.rowCount > 1 ? { from: "A1", to: `${worksheet.getColumn(worksheet.columnCount).letter}1` } : undefined;
   });
+}
 
+async function workbookToDownload(workbook: ExcelJS.Workbook, fileName: string): Promise<{ blob: Blob; fileName: string }> {
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  return { blob, fileName: `KPO_BL_Tracker_${new Date().toISOString().slice(0, 10)}.xlsx` };
+  return { blob, fileName };
+}
+
+function todayStamp(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export function downloadBlob(blob: Blob, fileName: string): void {
