@@ -87,8 +87,9 @@ describe("dashboard components", () => {
     expect(view.querySelector("button[aria-current='page']")?.textContent).toBe("Dashboard");
   });
 
-  it("renders upload preview counts", () => {
+  it("renders upload preview counts and export action", () => {
     const preview = parseBlInput("MEDUWU951960\nMEDUWU951960\n***");
+    const onExportPreview = vi.fn();
     const view = render(
       <UploadPanel
         raw="MEDUWU951960"
@@ -98,6 +99,7 @@ describe("dashboard components", () => {
         onRaw={vi.fn()}
         onFile={vi.fn()}
         onCreate={vi.fn()}
+        onExportPreview={onExportPreview}
       />
     );
 
@@ -105,6 +107,11 @@ describe("dashboard components", () => {
     expect(view.textContent).toContain("validos");
     expect(view.textContent).toContain("duplicados");
     expect(view.textContent).toContain("invalidos");
+
+    act(() => {
+      view.querySelector<HTMLButtonElement>("button[aria-label='Exportar validacion previa a Excel']")?.click();
+    });
+    expect(onExportPreview).toHaveBeenCalledTimes(1);
   });
 
   it("renders empty table state and table rows", () => {
