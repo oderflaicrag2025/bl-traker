@@ -57,14 +57,17 @@ Copia `.env.example` y completa segun el entorno:
 - `docs/Documentacion.md`: alcance canonico del proyecto.
 - `docs/Validacion-local.md`: pasos para instalar, compilar, probar y validar fuera del entorno del agente.
 - `docs/Backlog-sin-infraestructura.md`: proximos avances posibles sin Supabase, despliegue ni worker real.
+- `docs/Pendientes-infraestructura.md`: pasos que deben ejecutarse en Supabase, worker/red y despliegue.
 
 ## Modulos principales
 
 - `src/App.tsx`: composicion de pantallas demo.
+- `src/components/*`: componentes fisicos del dashboard, carga, cola, admin y detalle.
 - `src/lib/types.ts`: tipos del dominio.
 - `src/lib/bl-validation.ts`: normalizacion, validacion y preview de BL.
 - `src/lib/file-import.ts`: lectura de CSV/TXT/TSV/Excel.
 - `src/lib/batch-engine.ts`: cola local, totales, cancelacion y reintentos.
+- `src/lib/batch-repository.ts`: abstraccion para cambiar localStorage por Supabase.
 - `src/lib/excel-report.ts`: exportacion Excel.
 - `src/lib/local-store.ts`: persistencia local temporal para modo demo.
 - `src/lib/aduanas-parser.ts`: parser HTML maritimo inicial.
