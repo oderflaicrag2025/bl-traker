@@ -1,11 +1,12 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Download, FileSpreadsheet, LogOut, PauseCircle, Play, Plus, RefreshCw, RotateCcw, Search, Ship, ShieldCheck, X } from "lucide-react";
 import { MAX_BATCH_SIZE, parseBlInput } from "./lib/bl-validation";
 import { cancelBatch, createBatchFromRows, filterItems, resetItemForRetry, resolveDemoItem, withBatchTotals } from "./lib/batch-engine";
-import { demoBatch, demoUsers, sourceHealth } from "./lib/demo-data";
+import { demoUsers, sourceHealth } from "./lib/demo-data";
 import { downloadBlob, generateBlExcel } from "./lib/excel-report";
 import { formatDateTime, formatNumber, todayBatchName } from "./lib/format";
 import { parseUploadFile } from "./lib/file-import";
+import { loadDemoBatches, saveDemoBatches } from "./lib/local-store";
 import { badgeClass, statusLabel } from "./lib/status";
 import type { BlBatch, BlItem, DashboardFilters, UploadPreview } from "./lib/types";
 
@@ -14,7 +15,7 @@ type View = "dashboard" | "queue" | "admin";
 export function App() {
   const [logged, setLogged] = useState(import.meta.env.VITE_AUTH_MODE !== "supabase");
   const [view, setView] = useState<View>("dashboard");
-  const [batches, setBatches] = useState<BlBatch[]>([demoBatch]);
+  const [batches, setBatches] = useState<BlBatch[]>(() => loadDemoBatches());
   const [raw, setRaw] = useState("MAEU269371924\nMAEU269768230\nMEDUWU951960");
   const [batchName, setBatchName] = useState(todayBatchName());
   const [filters, setFilters] = useState<DashboardFilters>({ search: "", estado: "all", puerto: "all", dateFrom: "", dateTo: "" });
@@ -23,6 +24,10 @@ export function App() {
   const [processingBatchId, setProcessingBatchId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const cancelRef = useRef(false);
+
+  useEffect(() => {
+    saveDemoBatches(batches);
+  }, [batches]);
 
   const allItems = useMemo(() => batches.flatMap((batch) => batch.items), [batches]);
   const currentResults = useMemo(() => new Set(allItems.filter((item) => item.estado === "exitoso").map((item) => item.identificadorNormalizado)), [allItems]);
