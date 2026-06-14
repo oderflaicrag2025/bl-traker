@@ -1,4 +1,6 @@
 import { loadDemoBatches, resetDemoBatches, saveDemoBatches } from "./local-store";
+import { isSupabaseMode } from "./supabase-client";
+import { SupabaseBatchRepository } from "./supabase-batch-repository";
 import type { BlBatch } from "./types";
 
 export interface BatchRepository {
@@ -22,3 +24,9 @@ class LocalBatchRepository implements BatchRepository {
 }
 
 export const localBatchRepository: BatchRepository = new LocalBatchRepository();
+
+// Selector segun VITE_AUTH_MODE: demo -> localStorage, supabase -> Supabase.
+// SupabaseBatchRepository solo se instancia (y lee env) si el modo es supabase.
+export const batchRepository: BatchRepository = isSupabaseMode()
+  ? new SupabaseBatchRepository()
+  : localBatchRepository;

@@ -16,7 +16,10 @@ import { sourceHealth } from "./lib/demo-data";
 import { downloadBlob, generateBlExcel, generatePreviewExcel } from "./lib/excel-report";
 import { todayBatchName } from "./lib/format";
 import { parseUploadFile } from "./lib/file-import";
-import { localBatchRepository } from "./lib/batch-repository";
+import { batchRepository, localBatchRepository } from "./lib/batch-repository";
+import { isSupabaseMode } from "./lib/supabase-client";
+import { getCurrentSession, signOut } from "./lib/auth";
+import { invokeProcessBatch } from "./lib/process-client";
 import type { BlBatch, BlItem, DashboardFilters, UploadPreview } from "./lib/types";
 
 export function App() {
@@ -40,14 +43,28 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    localBatchRepository.list().then((stored) => {
+    // Rehidrata sesion real en modo supabase (si hay sesion vigente, entra directo).
+    if (isSupabaseMode()) {
+      getCurrentSession().then((session) => { if (session) setLogged(true); }).catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    batchRepository.list().then((stored) => {
       setBatches(stored);
       setHydrated(true);
+    }).catch((error) => {
+      setHydrated(true);
+      notify(error instanceof Error ? error.message : "No se pudieron cargar los lotes.");
     });
   }, []);
 
   useEffect(() => {
-    if (hydrated) localBatchRepository.saveAll(batches).catch(() => notify("No se pudo guardar localmente: almacenamiento lleno. Exporta a Excel y limpia lotes antiguos."));
+    // Auto-guardado solo en modo demo (localStorage). En supabase persistimos por accion
+    // del usuario (crear/cancelar/reintentar) para no reescribir lotes ajenos en cada carga.
+    if (hydrated && !isSupabaseMode()) {
+      localBatchRepository.saveAll(batches).catch(() => notify("No se pudo guardar localmente: almacenamiento lleno. Exporta a Excel y limpia lotes antiguos."));
+    }
   }, [batches, hydrated]);
 
   const allItems = useMemo(() => batches.flatMap((batch) => batch.items), [batches]);
@@ -65,6 +82,19 @@ export function App() {
   function notify(message: string) {
     setToast(message);
     window.setTimeout(() => setToast(null), 3200);
+  }
+
+  // En supabase persistimos el lote afectado por una accion del usuario (crear/cancelar/reintentar).
+  // En demo no hace nada: el efecto de auto-guardado escribe en localStorage.
+  function persistBatch(batch: BlBatch) {
+    if (isSupabaseMode()) {
+      batchRepository.saveAll([batch]).catch((error) => notify(error instanceof Error ? error.message : "No se pudo guardar en Supabase."));
+    }
+  }
+
+  function handleLogout() {
+    if (isSupabaseMode()) void signOut();
+    setLogged(false);
   }
 
   function updateRaw(value: string) {
@@ -85,6 +115,7 @@ export function App() {
     if (!preview.validRows.length) return notify("No hay BL validos para crear un lote.");
     const batch = createBatchFromRows(batchName, preview.validRows, preview.fileName);
     setBatches((current) => [batch, ...current]);
+    persistBatch(batch);
     setPreview(parseBlInput("", new Set([...currentResults, ...batch.items.map((item) => item.identificadorNormalizado)])));
     setRaw("");
     setUploadOpen(false);
@@ -102,6 +133,21 @@ export function App() {
   async function processBatch(batchId?: string) {
     const candidate = batches.find((batch) => batch.id === batchId) ?? batches.find((batch) => ["validado", "en_cola", "completado_con_errores"].includes(batch.estado));
     if (!candidate) return notify("No hay lote validado para procesar.");
+    if (isSupabaseMode()) {
+      // El worker (backend, service_role) consulta Aduanas y escribe resultados.
+      // Aqui solo lo encolamos y recargamos. El avance en vivo necesitaria Supabase Realtime.
+      setProcessingBatchId(candidate.id);
+      try {
+        const result = await invokeProcessBatch(candidate.id);
+        notify(result.message);
+        setBatches(await batchRepository.list());
+      } catch (error) {
+        notify(error instanceof Error ? error.message : "No se pudo enviar el lote al worker.");
+      } finally {
+        setProcessingBatchId(null);
+      }
+      return;
+    }
     cancelRef.current = false;
     setProcessingBatchId(candidate.id);
     let next: BlBatch = { ...candidate, estado: "procesando", startedAt: new Date().toISOString(), finishedAt: undefined };
@@ -134,12 +180,20 @@ export function App() {
   }
 
   function retryItem(item: BlItem) {
-    setBatches((current) => current.map((batch) => batch.id === item.loteId ? resetItemForRetry(batch, item.id) : batch));
+    const target = batches.find((batch) => batch.id === item.loteId);
+    if (!target) return;
+    const updated = resetItemForRetry(target, item.id);
+    setBatches((current) => replaceBatch(current, updated));
+    persistBatch(updated);
     notify(`BL ${item.identificadorNormalizado} preparado para reintento manual.`);
   }
 
   function retryFailed(batchId: string) {
-    setBatches((current) => current.map((batch) => batch.id === batchId ? batch.items.reduce((next, item) => item.ultimoError ? resetItemForRetry(next, item.id) : next, batch) : batch));
+    const target = batches.find((batch) => batch.id === batchId);
+    if (!target) return;
+    const updated = target.items.reduce((next, item) => item.ultimoError ? resetItemForRetry(next, item.id) : next, target);
+    setBatches((current) => replaceBatch(current, updated));
+    persistBatch(updated);
     notify("Fallidos preparados para reintento controlado.");
   }
 
@@ -152,7 +206,7 @@ export function App() {
 
   return (
     <div>
-      <Header view={view} setView={setView} latestBatch={latestBatch} processing={Boolean(processingBatchId)} onOpenUpload={() => setUploadOpen(true)} onExport={() => void exportExcel()} canExport={filtered.length > 0} onProcess={() => void processBatch()} onCancel={requestCancel} onLogout={() => setLogged(false)} />
+      <Header view={view} setView={setView} latestBatch={latestBatch} processing={Boolean(processingBatchId)} onOpenUpload={() => setUploadOpen(true)} onExport={() => void exportExcel()} canExport={filtered.length > 0} onProcess={() => void processBatch()} onCancel={requestCancel} onLogout={handleLogout} />
       <main className="container main grid">
         <div className="alert"><AlertTriangle size={17} /><div><strong>Modo demo sin Supabase</strong><div>Este bloque adelanta carga, cola, exportacion, logs y administracion local. Luego se reemplaza el almacenamiento por Supabase.</div></div></div>
         <SourceStrip sources={sourceHealth} />
@@ -166,7 +220,7 @@ export function App() {
             <BlTable rows={filtered} select={setSelected} retry={retryItem} />
           </section>
         </>}
-        {view === "queue" && <QueueView batches={batches} processingBatchId={processingBatchId} onProcess={(id) => void processBatch(id)} onRetryFailed={retryFailed} onCancel={(batch) => setBatches((current) => replaceBatch(current, cancelBatch(batch)))} />}
+        {view === "queue" && <QueueView batches={batches} processingBatchId={processingBatchId} onProcess={(id) => void processBatch(id)} onRetryFailed={retryFailed} onCancel={(batch) => { const cancelled = cancelBatch(batch); setBatches((current) => replaceBatch(current, cancelled)); persistBatch(cancelled); }} />}
         {view === "admin" && <AdminView logs={technicalLogs} />}
       </main>
       {uploadOpen && <UploadDialog raw={raw} preview={preview} batchName={batchName} setBatchName={setBatchName} onRaw={updateRaw} onFile={handleFile} onCreate={createBatch} onExportPreview={exportPreviewExcel} close={() => setUploadOpen(false)} />}

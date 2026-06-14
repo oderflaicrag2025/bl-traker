@@ -2,6 +2,10 @@
 
 Este documento separa lo que no puede cerrarse correctamente desde el entorno del agente porque depende de Supabase, red de ejecucion, despliegue o datos reales de Aduanas.
 
+> Actualizacion 2026-06-13: el CODIGO de la integracion (repositorio Supabase, auth, worker y
+> migraciones 002/003) ya esta escrito. Lo que queda en este documento es el SETUP EXTERNO y la
+> VALIDACION contra el sitio real. El mapa de conexiones esta en `docs/CONEXIONES-PENDIENTES.md`.
+
 ## Escenario A: Supabase
 
 Pasos a ejecutar cuando exista el proyecto Supabase:

@@ -134,6 +134,20 @@ Se adelanto desarrollo que no depende de Supabase ni despliegue:
 
 Este avance mantiene modo demo y no reemplaza la integracion real pendiente con Supabase, worker y Aduanas. Los pasos externos estan documentados en `docs/Pendientes-infraestructura.md`.
 
+## Avance de integracion - 2026-06-13
+
+Se adelanto el CODIGO de la integracion real (queda pendiente solo el setup externo y la validacion contra el sitio):
+
+- `SupabaseBatchRepository` que implementa la misma interfaz `BatchRepository` (la UI no cambia) y un selector por `VITE_AUTH_MODE` (demo -> localStorage, supabase -> Supabase).
+- Autenticacion real (`auth.ts`): `signIn`/`signOut`, rehidratacion de sesion y resolucion de rol desde `profiles`; `Login` hace login real en modo supabase.
+- Invocacion del worker desde "Procesar" en modo supabase (`process-client.ts`).
+- Worker `supabase/functions/process-bl-batch` reescrito: procesamiento secuencial con pausas, lectura dinamica de `pageCode`, cookies de sesion solo en backend, parser compartido y escritura de resultado/error/log con `service_role`. No evade restricciones. Requiere validacion con la red real.
+- Migracion `002_escritura_cliente_y_auth.sql`: politicas de escritura del cliente (UPDATE de lotes/items, INSERT de items), dueno automatico del lote y auto-creacion de `profiles` al registrarse.
+- Migracion `003_limpieza_retencion.sql`: funcion `purgar_expirados()` + agenda diaria con pg_cron.
+- Mejoras de bundle (code-splitting de exceljs), `VITE_PROCESSING_PAUSE_MS` respetado y guard de cuota en localStorage.
+
+El mapa completo de conexiones y lo que falta por conectar esta en `docs/CONEXIONES-PENDIENTES.md`.
+
 ## Criterios de aceptacion MVP
 
 - Usuario autorizado puede iniciar sesion.

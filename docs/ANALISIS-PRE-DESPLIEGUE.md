@@ -81,11 +81,20 @@ Crear `SupabaseBatchRepository` que implemente la misma interfaz y seleccionar p
 ## 5. Plan sugerido (orden)
 
 - [x] **P0** Arreglar build + test (hecho y verificado).
-- [ ] **P1.a** Implementar `SupabaseBatchRepository` tras la interfaz existente.
-- [ ] **P1.b** Completar migración: políticas de escritura o estrategia `service_role`.
-- [ ] **P1.c** Worker de consulta a Aduanas (backend, fuera del navegador).
-- [ ] **P1.d** Job de limpieza por `expires_at` (pg_cron / Edge Function).
-- [ ] **P1.e** Activar auth real (`VITE_AUTH_MODE=supabase` + `profiles`).
+- [x] **P1.a** `SupabaseBatchRepository` implementado tras la interfaz existente + selector por
+      `VITE_AUTH_MODE`. *(Código listo; requiere proyecto Supabase real.)*
+- [x] **P1.b** Migración `002_escritura_cliente_y_auth.sql`: políticas UPDATE de lotes/items,
+      INSERT de items, dueño automático del lote; escritura de resultados/errores/logs reservada a
+      `service_role` (worker).
+- [x] **P1.c** Worker `supabase/functions/process-bl-batch` reescrito para procesar de verdad
+      (pageCode dinámico, cookies, pausas, parser, escritura). 🟠 **Requiere validación contra el
+      sitio real** (ver `docs/CONEXIONES-PENDIENTES.md`).
+- [x] **P1.d** Job de limpieza `003_limpieza_retencion.sql` (`purgar_expirados()` + pg_cron diario).
+- [x] **P1.e** Auth real codificada (`auth.ts` + `Login` en modo supabase + `profiles`/rol).
+      *(Requiere usuarios reales en Supabase Auth.)*
+
+> El detalle completo de qué falta conectar (credenciales, despliegue, validación del scraping) está
+> en **`docs/CONEXIONES-PENDIENTES.md`**.
 - [x] **P2** `VITE_PROCESSING_PAUSE_MS` respetado, guard de cuota localStorage,
       code-splitting de `exceljs` (1.18 MB → 240 KB inicial), `npm audit` revisado
       (riesgo transitivo aceptado). Pendiente opcional: `moduleResolution: Bundler`
