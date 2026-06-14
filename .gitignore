@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# graphify / análisis local (no forma parte de la app)
+graphify-out/
+.graphifyignore
+concepts.mjs
+enrich.mjs
+sync.mjs
+delegate.mjs
+concepts.json
+enrich.json

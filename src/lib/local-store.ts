@@ -15,9 +15,25 @@ export function loadDemoBatches(): BlBatch[] {
   }
 }
 
+export class StorageQuotaError extends Error {
+  constructor() {
+    super("Se supero la capacidad del almacenamiento local del navegador.");
+    this.name = "StorageQuotaError";
+  }
+}
+
 export function saveDemoBatches(batches: BlBatch[]): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(batches));
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(batches));
+  } catch (error) {
+    // localStorage ~5 MB: con muchos lotes (resultados + HTML) puede llenarse.
+    // Aviso explicito en vez de fallar en silencio. Migrar a Supabase resuelve esto.
+    if (error instanceof DOMException && (error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED")) {
+      throw new StorageQuotaError();
+    }
+    throw error;
+  }
 }
 
 export function resetDemoBatches(): BlBatch[] {

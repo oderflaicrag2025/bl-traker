@@ -4,7 +4,14 @@ const DEMO_TIME = "2026-06-11T19:37:00.000Z";
 
 export const sourceHealth: SourceHealth[] = [
   { id: "aduanas", nombre: "Aduanas Chile - BL Maritimo", estado: "activa", ultimoIntento: DEMO_TIME, ultimoExito: DEMO_TIME, mensaje: "POST confirmado. Page code dinamico pendiente en worker real." },
-  { id: "logs", nombre: "Logs HTML temporales", estado: "activa", ultimoIntento: DEMO_TIME, ultimoExito: DEMO_TIME, mensaje: "Retencion tecnica definida: 1 dia." },
+  { id: "logs", nombre: "Logs HTML temporales", estado: "activa", ultimoIntento: DEMO_TIME, ultimoExito: DEMO_TIME, mensaje: "Retencion tecnica definida: 1 dia." }
+];
+
+// Worker secuencial: OCULTO de la vista a peticion del negocio (2026-06-12).
+// Se mantiene documentado aqui para reactivarlo cuando exista el backend real.
+// Es la pieza que realmente consultaria Aduanas (ver docs/ANALISIS-PRE-DESPLIEGUE.md §3.1).
+// Para volver a mostrarlo, agrega `...hiddenSources` al array sourceHealth de arriba.
+export const hiddenSources: SourceHealth[] = [
   { id: "worker", nombre: "Worker secuencial", estado: "en_revision", ultimoIntento: DEMO_TIME, mensaje: "Pendiente red final, pausa segura y presupuesto Railway." }
 ];
 

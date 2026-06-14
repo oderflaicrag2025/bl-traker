@@ -3,7 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { Header, type AppView } from "./components/Header";
 import { SourceStrip } from "./components/SourceStrip";
 import { Summary } from "./components/Summary";
-import { UploadPanel } from "./components/UploadPanel";
+import { UploadDialog } from "./components/UploadDialog";
 import { FiltersBar } from "./components/FiltersBar";
 import { BlTable } from "./components/BlTable";
 import { QueueView } from "./components/QueueView";
@@ -31,7 +31,13 @@ export function App() {
   const [selected, setSelected] = useState<BlItem | null>(null);
   const [processingBatchId, setProcessingBatchId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const cancelRef = useRef(false);
+  // Pausa entre items configurable por entorno (evita golpear Aduanas). Default 550ms.
+  const processingPauseMs = useMemo(() => {
+    const parsed = Number(import.meta.env.VITE_PROCESSING_PAUSE_MS);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 550;
+  }, []);
 
   useEffect(() => {
     localBatchRepository.list().then((stored) => {
@@ -41,12 +47,16 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (hydrated) void localBatchRepository.saveAll(batches);
+    if (hydrated) localBatchRepository.saveAll(batches).catch(() => notify("No se pudo guardar localmente: almacenamiento lleno. Exporta a Excel y limpia lotes antiguos."));
   }, [batches, hydrated]);
 
   const allItems = useMemo(() => batches.flatMap((batch) => batch.items), [batches]);
   const currentResults = useMemo(() => new Set(allItems.filter((item) => item.estado === "exitoso").map((item) => item.identificadorNormalizado)), [allItems]);
-  const filtered = useMemo(() => filterItems(allItems, filters), [allItems, filters]);
+  // Vista principal: solo la ultima consulta (ultimo lote procesado; si ninguno termino aun, el mas reciente).
+  // El historial completo sigue disponible en la pestana "Cola".
+  const lastBatch = useMemo(() => batches.find((batch) => batch.finishedAt) ?? batches[0], [batches]);
+  const dashboardItems = useMemo(() => lastBatch?.items ?? [], [lastBatch]);
+  const filtered = useMemo(() => filterItems(dashboardItems, filters), [dashboardItems, filters]);
   const latestBatch = batches[0];
   const technicalLogs = useMemo(() => allItems.filter((item) => item.error || item.ultimoStatusHttp || item.ultimoError), [allItems]);
 
@@ -77,6 +87,8 @@ export function App() {
     setBatches((current) => [batch, ...current]);
     setPreview(parseBlInput("", new Set([...currentResults, ...batch.items.map((item) => item.identificadorNormalizado)])));
     setRaw("");
+    setUploadOpen(false);
+    setView("dashboard");
     notify(`Lote creado con ${batch.items.length} BL validos.`);
   }
 
@@ -106,7 +118,7 @@ export function App() {
       if (!["validado", "pendiente", "error_temporal", "sin_resultado"].includes(item.estado)) continue;
       next = { ...next, items: next.items.map((row) => row.id === item.id ? { ...row, estado: "en_proceso", startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : row) };
       setBatches((current) => replaceBatch(current, withBatchTotals(next)));
-      await new Promise((resolve) => window.setTimeout(resolve, 550));
+      await new Promise((resolve) => window.setTimeout(resolve, processingPauseMs));
       next = { ...next, items: next.items.map((row) => row.id === item.id ? resolveDemoItem(row) : row) };
       setBatches((current) => replaceBatch(current, withBatchTotals(next)));
     }
@@ -140,17 +152,16 @@ export function App() {
 
   return (
     <div>
-      <Header view={view} setView={setView} latestBatch={latestBatch} processing={Boolean(processingBatchId)} onExport={() => void exportExcel()} canExport={filtered.length > 0} onProcess={() => void processBatch()} onCancel={requestCancel} onLogout={() => setLogged(false)} />
+      <Header view={view} setView={setView} latestBatch={latestBatch} processing={Boolean(processingBatchId)} onOpenUpload={() => setUploadOpen(true)} onExport={() => void exportExcel()} canExport={filtered.length > 0} onProcess={() => void processBatch()} onCancel={requestCancel} onLogout={() => setLogged(false)} />
       <main className="container main grid">
         <div className="alert"><AlertTriangle size={17} /><div><strong>Modo demo sin Supabase</strong><div>Este bloque adelanta carga, cola, exportacion, logs y administracion local. Luego se reemplaza el almacenamiento por Supabase.</div></div></div>
         <SourceStrip sources={sourceHealth} />
-        <Summary items={allItems} />
+        <Summary items={dashboardItems} />
         {view === "dashboard" && <>
-          <UploadPanel raw={raw} preview={preview} batchName={batchName} setBatchName={setBatchName} onRaw={updateRaw} onFile={handleFile} onCreate={createBatch} onExportPreview={exportPreviewExcel} />
-          <FiltersBar filters={filters} setFilters={setFilters} total={allItems.length} filtered={filtered.length} />
+          <FiltersBar filters={filters} setFilters={setFilters} total={dashboardItems.length} filtered={filtered.length} />
           <section className="panel">
             <div className="panel-header">
-              <div><p className="panel-title">Dashboard de consultas</p><p className="panel-subtitle">Doble clic en una fila para ver detalle. La exportacion respeta filtros.</p></div>
+              <div><p className="panel-title">Ultima consulta{lastBatch ? `: ${lastBatch.nombreLote}` : ""}</p><p className="panel-subtitle">Solo se muestran los BL de la consulta mas reciente. El historial completo esta en la pestana "Cola". Doble clic en una fila para ver detalle.</p></div>
             </div>
             <BlTable rows={filtered} select={setSelected} retry={retryItem} />
           </section>
@@ -158,6 +169,7 @@ export function App() {
         {view === "queue" && <QueueView batches={batches} processingBatchId={processingBatchId} onProcess={(id) => void processBatch(id)} onRetryFailed={retryFailed} onCancel={(batch) => setBatches((current) => replaceBatch(current, cancelBatch(batch)))} />}
         {view === "admin" && <AdminView logs={technicalLogs} />}
       </main>
+      {uploadOpen && <UploadDialog raw={raw} preview={preview} batchName={batchName} setBatchName={setBatchName} onRaw={updateRaw} onFile={handleFile} onCreate={createBatch} onExportPreview={exportPreviewExcel} close={() => setUploadOpen(false)} />}
       {selected && <DetailDialog item={selected} close={() => setSelected(null)} />}
       {toast && <div className="toast">{toast}</div>}
     </div>

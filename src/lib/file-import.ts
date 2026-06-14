@@ -1,6 +1,13 @@
-import ExcelJS from "exceljs";
+import type ExcelJS from "exceljs";
 import { buildUploadPreview } from "./bl-validation";
 import type { UploadPreview } from "./types";
+
+// Carga diferida: exceljs solo se necesita al importar .xlsx/.xls. Mantiene el
+// bundle inicial liviano (mismo motivo que en excel-report.ts).
+async function loadExcel(): Promise<{ Workbook: new () => ExcelJS.Workbook }> {
+  const mod = await import("exceljs");
+  return ((mod as { default?: { Workbook: new () => ExcelJS.Workbook } }).default ?? mod) as { Workbook: new () => ExcelJS.Workbook };
+}
 
 const BL_HEADER_CANDIDATES = ["bl", "nro bl", "nro de bl", "numero bl", "número bl", "bill of lading", "guia", "guía"];
 
@@ -19,7 +26,8 @@ export function splitDelimitedText(text: string): string[] {
 }
 
 async function readExcelBlValues(file: File): Promise<string[]> {
-  const workbook = new ExcelJS.Workbook();
+  const Excel = await loadExcel();
+  const workbook = new Excel.Workbook();
   await workbook.xlsx.load(await file.arrayBuffer());
   const sheet = workbook.worksheets[0];
   if (!sheet) return [];

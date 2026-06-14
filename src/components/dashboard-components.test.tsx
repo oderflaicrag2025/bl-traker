@@ -75,6 +75,7 @@ describe("dashboard components", () => {
         latestBatch={batch}
         processing={false}
         canExport
+        onOpenUpload={vi.fn()}
         onExport={vi.fn()}
         onProcess={vi.fn()}
         onCancel={vi.fn()}

@@ -1,8 +1,16 @@
-import ExcelJS from "exceljs";
+import type { Workbook } from "exceljs";
 import type { BlItem, UploadPreview, UploadPreviewRow } from "./types";
 
+// exceljs es pesado (~900 KB). Se carga bajo demanda (solo al exportar) para no
+// inflar el bundle inicial. Ver docs/ANALISIS-PRE-DESPLIEGUE.md §4.4.
+async function loadExcel(): Promise<{ Workbook: new () => Workbook }> {
+  const mod = await import("exceljs");
+  return ((mod as { default?: { Workbook: new () => Workbook } }).default ?? mod) as { Workbook: new () => Workbook };
+}
+
 export async function generateBlExcel(items: BlItem[]): Promise<{ blob: Blob; fileName: string }> {
-  const workbook = new ExcelJS.Workbook();
+  const Excel = await loadExcel();
+  const workbook = new Excel.Workbook();
   workbook.creator = "KPO BL Tracker";
   workbook.created = new Date();
 
@@ -62,7 +70,8 @@ export async function generateBlExcel(items: BlItem[]): Promise<{ blob: Blob; fi
 }
 
 export async function generatePreviewExcel(preview: UploadPreview): Promise<{ blob: Blob; fileName: string }> {
-  const workbook = new ExcelJS.Workbook();
+  const Excel = await loadExcel();
+  const workbook = new Excel.Workbook();
   workbook.creator = "KPO BL Tracker";
   workbook.created = new Date();
 
@@ -87,7 +96,7 @@ export async function generatePreviewExcel(preview: UploadPreview): Promise<{ bl
   return workbookToDownload(workbook, `KPO_BL_Preview_${todayStamp()}.xlsx`);
 }
 
-function addPreviewSheet(workbook: ExcelJS.Workbook, name: string, rows: UploadPreviewRow[]): void {
+function addPreviewSheet(workbook: Workbook, name: string, rows: UploadPreviewRow[]): void {
   const sheet = workbook.addWorksheet(name);
   sheet.columns = [
     { header: "Posicion", key: "position", width: 12 },
@@ -107,7 +116,7 @@ function addPreviewSheet(workbook: ExcelJS.Workbook, name: string, rows: UploadP
   }));
 }
 
-function applyWorkbookFormatting(workbook: ExcelJS.Workbook): void {
+function applyWorkbookFormatting(workbook: Workbook): void {
   workbook.worksheets.forEach((worksheet) => {
     worksheet.views = [{ state: "frozen", ySplit: 1 }];
     worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -118,7 +127,7 @@ function applyWorkbookFormatting(workbook: ExcelJS.Workbook): void {
   });
 }
 
-async function workbookToDownload(workbook: ExcelJS.Workbook, fileName: string): Promise<{ blob: Blob; fileName: string }> {
+async function workbookToDownload(workbook: Workbook, fileName: string): Promise<{ blob: Blob; fileName: string }> {
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   return { blob, fileName };
