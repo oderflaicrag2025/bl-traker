@@ -1,124 +1,78 @@
-# Backlog sin Supabase ni despliegue
+# Backlog para migracion interna a `port-eta-dashboard`
 
-Este backlog lista trabajo que todavia se puede adelantar desde el repo sin depender de Supabase, Vercel, Railway ni acceso real a Aduanas.
+Fecha: 2026-06-15
 
-## Completado - 2026-06-12
+Este backlog ya no prioriza un despliegue independiente de `bl-traker`. La prioridad es migrar el codigo como modulo interno del repo `Kpo-services/port-eta-dashboard`.
 
-1. Separacion de `src/App.tsx` en componentes fisicos ya iniciada y conectada.
-   - `components/Header.tsx`
-   - `components/Login.tsx`
-   - `components/UploadPanel.tsx`
-   - `components/FiltersBar.tsx`
-   - `components/BlTable.tsx`
-   - `components/QueueView.tsx`
-   - `components/AdminView.tsx`
-   - `components/DetailDialog.tsx`
-   - `components/SourceStrip.tsx`
-   - `components/Summary.tsx`
+Plan canonico:
 
-2. Interfaz de repositorio local creada.
-   - `src/lib/batch-repository.ts`
-   - `BatchRepository`
-   - `LocalBatchRepository`
-   - punto de reemplazo futuro para `SupabaseBatchRepository`
+```text
+docs/PLAN-MIGRACION-A-PORT-ETA-DASHBOARD.md
+```
 
-3. Pruebas iniciales de componentes principales sin dependencias nuevas.
-   - Header con navegacion activa.
-   - Preview de carga.
-   - Tabla vacia y tabla con resultados.
-   - Modal de detalle con cierre por Escape.
+## Completado en este repo
 
-4. Mejoras iniciales de accesibilidad.
-   - `aria-label` en botones iconicos principales.
-   - `aria-current` en navegacion activa.
-   - Estado vacio anunciable en tabla.
-   - Modal con `role="dialog"`, `aria-modal` y cierre por teclado.
+- Componentes principales del flujo BL: header, carga, filtros, tabla, cola, admin, detalle, fuentes y resumen.
+- Librerias de dominio: validacion BL, importacion de archivos, motor de cola, exportacion Excel y parser Aduanas.
+- Repositorio local y repositorio Supabase.
+- Migraciones SQL para schema BL, politicas, perfiles y limpieza.
+- Edge Function `process-bl-batch`.
 
-5. Exportacion Excel del preview de carga.
-   - Hoja `Validos`.
-   - Hoja `Duplicados`.
-   - Hoja `Invalidos`.
-   - Hoja `Resumen`.
-   - Prueba de workbook generado.
+## Prioridad 1 - Preparar codigo frontend
 
-## Prioridad 1 - Calidad del frontend demo
+1. Convertir `src/App.tsx` en pagina interna `BlTracker.tsx`.
+2. Quitar el login propio del flujo productivo.
+3. Usar la sesion ya resuelta por el dashboard principal.
+4. Envolver la pagina en `.bl-tracker`.
+5. Mantener dashboard, carga, cola, admin, detalle y exportacion.
 
-1. Ampliar pruebas de componentes.
-   - Vista cola con lote procesando/cancelado.
-   - Vista admin con logs tecnicos.
-   - Flujo de click para detalle y reintento.
+## Prioridad 2 - Unificar Supabase
 
-2. Completar accesibilidad.
-   - Foco inicial en modal de detalle.
-   - Retorno de foco al cerrar modal.
-   - Revision de contraste y nombres accesibles en controles restantes.
+1. Reemplazar el cliente Supabase propio por el cliente del repo principal.
+2. Evitar que el modulo dependa de una app standalone.
+3. Mantener `profiles` solo para roles BL si el dashboard principal no tiene roles compartidos.
+4. Revisar conflictos de nombres antes de ejecutar migraciones.
 
-## Prioridad 2 - Parser y fixtures
+## Prioridad 3 - Scopear estilos
 
-1. Reemplazar fixtures minimos por HTML reales completos.
-   - `01-403-Forbidden.html`
-   - `02-Manifiestos-x-BLs-sin-datos.html`
-   - `03-Manifiestos-x-BLs.html`
+1. Mover `src/styles.css` a `src/features/bl-tracker/styles.css`.
+2. Prefijar estilos bajo `.bl-tracker`.
+3. Evitar reglas globales para `body`, `button`, `table`, `.container`, `.btn`, `.panel` y `.badge`.
+4. Evaluar migracion posterior a Tailwind/shadcn.
 
-2. Fortalecer parser maritimo.
-   - Detectar formulario roto.
-   - Detectar page code faltante.
-   - Separar extraccion de manifiesto y extraccion de tabla BL.
-   - Guardar campos extra no mapeados en `camposExtraidosJson`.
+## Prioridad 4 - Migrar al repo principal
 
-3. Agregar pruebas de regresion.
-   - HTML exitoso real.
-   - HTML sin datos real.
-   - 403 real.
-   - HTML con contenido inyectado por extension.
+1. Crear `src/features/bl-tracker/components`.
+2. Crear `src/features/bl-tracker/lib`.
+3. Crear `src/pages/BlTracker.tsx`.
+4. Agregar ruta protegida `/bl-tracker`.
+5. Agregar boton `BL Tracker` en el header del dashboard ETA.
+6. Validar navegacion sin segundo login.
 
-## Prioridad 3 - Exportacion y reportes
+## Prioridad 5 - Backend compartido
 
-1. Mejorar Excel de resultados.
-   - Filtros activados en encabezados.
-   - Ancho de columnas ajustado.
-   - Formato numerico para peso.
-   - Hoja `Resumen` por lote.
+1. Copiar migraciones BL al repo principal con timestamp nuevo.
+2. Ejecutar migraciones en ambiente de prueba.
+3. Copiar `supabase/functions/process-bl-batch` al repo principal.
+4. Desplegar la funcion en el Supabase principal.
+5. Configurar variables privadas del worker en Supabase.
+6. Probar lote pequeno real.
 
-## Prioridad 4 - Preparacion para Supabase
+## Prioridad 6 - Pruebas
 
-1. Mapear nombres frontend a columnas Supabase.
-   - `BlBatch` <-> `lotes_consulta`
-   - `BlItem` <-> `items_consulta`
-   - `AduanaResult` <-> `resultados_aduana`
-   - `ConsultationError` <-> `errores_consulta`
+1. Portar pruebas utiles al repo principal.
+2. Validar build, tests y lint.
+3. Confirmar que el dashboard ETA sigue funcionando.
+4. Confirmar que BL Tracker crea lotes, procesa, guarda resultados/errores y exporta Excel.
 
-2. Agregar pruebas de mapping.
-   - Sin conectar Supabase real.
-   - Solo transformaciones de objetos.
+## Trabajo que no conviene adelantar en este repo
 
-## Prioridad 5 - Operacion demo
-
-1. Agregar configuracion local de pausas.
-   - Pausa base.
-   - Pausa incremental para reintentos.
-   - Maximo de intentos editable solo en modo admin demo.
-
-2. Agregar simulador de escenarios.
-   - Exito.
-   - Sin resultado.
-   - 403 temporal.
-   - Parser roto.
-   - Timeout.
-
-3. Agregar limpieza local de logs expirados.
-   - Simular retencion de 1 dia.
-   - Boton admin para limpiar logs vencidos.
-
-## Trabajo que no conviene adelantar sin infraestructura
-
-- Login real y recuperacion de sesiones.
-- RLS validada contra usuarios reales.
-- Worker real consultando Aduanas.
-- Limpieza programada real en base de datos.
-- Validacion de 403 por red/VPN/localidad.
-- Despliegue Vercel/Railway.
+- Nuevo despliegue web standalone.
+- Segundo login.
+- Integracion por iframe.
+- Layout o router separado.
+- Funcionalidades que dupliquen el dashboard principal.
 
 ## Siguiente bloque recomendado
 
-El siguiente avance mas rentable sin infraestructura es mejorar el Excel de resultados con hoja `Resumen`, auto-filtros y formato numerico, o fortalecer el parser con mas escenarios sinteticos mientras no existan los HTML reales completos.
+Preparar un PR en `Kpo-services/port-eta-dashboard` con la migracion base del modulo `/bl-tracker`, todavia sin cambios profundos de negocio. Despues conectar Supabase, worker y validacion contra Aduanas.
