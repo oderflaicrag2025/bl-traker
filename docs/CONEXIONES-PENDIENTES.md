@@ -1,112 +1,122 @@
-# Conexiones pendientes y trabajo faltante — KPO BL Tracker
+# Conexiones pendientes y trabajo faltante — migracion a `port-eta-dashboard`
 
-Fecha: 2026-06-13 · Estado: frontend demo desplegable; backend real **codificado pero sin conectar**.
+Fecha: 2026-06-15
+Estado: codigo BL Tracker preparado, pero la decision vigente es **migrarlo como modulo interno** del repo `Kpo-services/port-eta-dashboard`.
 
-Este documento mapea **cada conexión** del sistema, qué quedó **escrito en código** y qué falta
-por hacer fuera del entorno (credenciales, despliegue, validación contra el sitio real).
-Es la guía para pasar de "demo" a "datos reales".
+Este documento reemplaza la idea anterior de desplegar `bl-traker` como app separada. La guia canonica detallada esta en:
 
----
-
-## 1. Mapa de componentes y conexiones
-
-```
-  [ Navegador / Frontend React ]
-        |  (1) leer/crear lote        (2) invocar worker
-        v                                   |
-  [ Supabase: Postgres + Auth ] <-----------+
-        ^   ^                               |
-        |   | (4) escribe resultados        v
-        |   +-------------------- [ Worker: Edge Function process-bl-batch ]
-        |                                   |  (3) GET pageCode + POST consulta
-        | (5) cron limpieza                 v
-        +--------------------------- [ Aduanas Chile (isidora.aduana.cl) ]
+```text
+docs/PLAN-MIGRACION-A-PORT-ETA-DASHBOARD.md
 ```
 
-| # | Conexión | Estado | Dónde |
-|---|----------|--------|-------|
-| 1 | Frontend ↔ Supabase (datos) | 🟡 **Código listo**, falta proyecto + credenciales | `src/lib/supabase-batch-repository.ts`, `src/lib/supabase-client.ts` |
-| — | Frontend ↔ Supabase (auth) | 🟡 **Código listo**, falta usuarios reales | `src/lib/auth.ts`, `src/components/Login.tsx` |
-| 2 | Frontend ↔ Worker (invocar) | 🟡 **Código listo**, falta function desplegada | `src/lib/process-client.ts` |
-| 3 | Worker ↔ Aduanas (scraping) | 🟠 **Código de referencia**, falta validar contra sitio real | `supabase/functions/process-bl-batch/index.ts` |
-| 4 | Worker ↔ Supabase (escritura) | 🟡 **Código listo**, falta service_role en secrets | mismo worker + RLS |
-| 5 | Limpieza por retención (cron) | 🟡 **SQL listo**, falta habilitar pg_cron | `supabase/migrations/003_limpieza_retencion.sql` |
+## 1. Decision vigente
 
-Leyenda: 🟢 funcionando · 🟡 código completo, requiere setup externo · 🟠 código que requiere validación con el sitio real.
+BL Tracker no debe quedar como segundo despliegue web. Debe vivir como ruta interna del dashboard principal:
 
----
+```text
+https://<dashboard-principal>/bl-tracker
+```
 
-## 2. Qué quedó hecho en esta fase (código)
+El usuario debe autenticarse una sola vez en `port-eta-dashboard` y acceder al modulo BL sin login adicional.
 
-- **Capa de datos Supabase** (`SupabaseBatchRepository`) que implementa la misma interfaz
-  `BatchRepository` que el modo local; la UI no cambia. Mapea snake_case ↔ camelCase y lee
-  lotes → items → resultado/errores en una sola consulta anidada.
-- **Selector por entorno**: `batchRepository` usa Supabase si `VITE_AUTH_MODE=supabase`, si no localStorage.
-- **Auth real**: `signIn` / `signOut` / rehidratación de sesión + rol desde `profiles`. `Login`
-  hace login real en modo supabase y mantiene acceso directo en demo.
-- **Invocación del worker** desde el botón "Procesar" (solo en modo supabase).
-- **Worker** (`process-bl-batch`): procesa items secuencialmente con pausas, lee `pageCode`
-  dinámico + cookies, parsea con el parser compartido, escribe resultado/error/log y recalcula
-  totales del lote. **No evade** captcha/403/bloqueos.
-- **Migraciones nuevas**:
-  - `002_escritura_cliente_y_auth.sql`: políticas UPDATE de lotes/items para el dueño, INSERT de
-    items, trigger de dueño automático del lote y auto-creación de `profiles` al registrarse.
-  - `003_limpieza_retencion.sql`: función `purgar_expirados()` + agenda diaria con pg_cron.
+## 2. Arquitectura objetivo
 
----
+```text
+[Browser]
+   |
+   v
+[port-eta-dashboard]
+   |-- /                 Dashboard ETAs Portuarios
+   |-- /bl-tracker       Modulo KPO BL Tracker
+             |
+             | usa AuthProvider/AuthGuard existente
+             | usa cliente Supabase existente
+             v
+        [Supabase unico]
+             |-- tablas ETAs: vessel_occurrences, source_statuses, scrape_runs, scrape_debug_logs
+             |-- tablas BL: lotes_consulta, items_consulta, resultados_aduana, errores_consulta, logs_html_consulta, fuentes_consulta, profiles
+             |-- functions: scrape-vessels, process-bl-batch
+                          |
+                          v
+                    [Aduanas Chile]
+```
 
-## 3. Qué falta por conexión (pasos concretos)
+## 3. Mapa de conexiones
 
-### (1)(2)(4) Supabase — datos, auth y escritura del worker
-1. Crear proyecto en Supabase y copiar `Project URL` y `anon key` al `.env`:
-   `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_AUTH_MODE=supabase`.
-2. Ejecutar migraciones en orden: `001_initial_schema.sql`, `002_escritura_cliente_y_auth.sql`,
-   `003_limpieza_retencion.sql` (SQL Editor o `supabase db push`).
-3. Crear usuarios en **Auth** (el trigger crea su fila en `profiles` con rol `usuario`).
-   Para un admin: `update public.profiles set rol='admin' where email='...';`
-4. Verificar: login real, crear un lote desde la app → debe aparecer en `lotes_consulta`/`items_consulta`.
+| Conexion | Estado actual en `bl-traker` | Accion para integracion |
+|---|---|---|
+| UI BL Tracker | Componentes y flujo creados en este repo | Migrar a `src/features/bl-tracker` y `src/pages/BlTracker.tsx` del repo principal. |
+| Router | App standalone en `src/App.tsx` | Convertir a ruta protegida `/bl-tracker` dentro de `port-eta-dashboard`. |
+| Auth | Login propio preparado para Supabase | Eliminar login standalone y usar `AuthProvider`/`AuthGuard` existentes del dashboard principal. |
+| Cliente Supabase | `src/lib/supabase-client.ts` propio | Reemplazar por `@/integrations/supabase/client` del dashboard principal. |
+| Datos BL | `SupabaseBatchRepository` ya codificado | Migrar repositorio y apuntarlo al cliente Supabase compartido. |
+| Worker BL | `supabase/functions/process-bl-batch` codificado | Copiar y desplegar en el mismo Supabase del dashboard ETA. |
+| Migraciones BL | `001`, `002`, `003` listas | Copiar al repo principal con timestamp nuevo y revisar conflictos antes de ejecutar. |
+| Limpieza logs | `purgar_expirados()` + `pg_cron` | Habilitar `pg_cron` en el Supabase principal o documentar cron externo. |
+| CSS | CSS global propio | Scopear bajo `.bl-tracker` para no afectar Tailwind/shadcn del dashboard ETA. |
 
-### (3)(4) Worker ↔ Aduanas — la pieza que trae datos reales
-1. Desplegar la function: `supabase functions deploy process-bl-batch`.
-2. Cargar secrets: `supabase secrets set PROCESSING_PAUSE_MS=1500 ADUANAS_TIMEOUT_MS=20000 MAX_ITEMS_POR_INVOCACION=100`
-   (`SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` los inyecta Supabase).
-3. **Validar contra el sitio real** (no se pudo desde el entorno del agente):
-   - Confirmar la URL del formulario inicial (`ADUANAS_FORM_URL`) y que `extractPageCode` la encuentra.
-   - Confirmar el set exacto de campos del POST (`EdNroManifiesto`, `EdNroGuia`, `CON_ConsultaGralMFTOpageCode`, `EventSource`, `EventName`, `totalManifiestos`).
-   - Revisar si 403 depende de IP/VPN/horario/cookies; medir tiempo por consulta y ajustar la pausa.
-   - Cargar fixtures reales y verificar el parser: `01-403-Forbidden.html`, `02-...sin-datos.html`, `03-...con-datos.html`.
-4. Probar un lote pequeño real antes de operación diaria.
+## 4. Trabajo ya hecho en este repo
 
-### (5) Limpieza por retención
-1. En Supabase habilitar la extensión **pg_cron** (Database > Extensions).
-2. Re-ejecutar el bloque de `003_limpieza_retencion.sql` (agenda el job 04:00 diario).
-3. Alternativa sin pg_cron: invocar `select public.purgar_expirados();` desde un cron externo.
+- Componentes principales del flujo BL: carga, preview, tabla, detalle, cola, admin, resumen y fuentes.
+- Validacion de BL, importacion CSV/TXT/TSV/Excel y exportacion Excel.
+- Repositorio local y repositorio Supabase.
+- Migraciones SQL para tablas BL, RLS, perfiles y limpieza.
+- Edge Function `process-bl-batch` para consultar Aduanas secuencialmente con pausas y registrar resultados/errores/logs.
+- Parser compartido para HTML de Aduanas.
 
-### Despliegue del frontend
-1. `npm install && npm run build` (en entorno con acceso a npm).
-2. Desplegar `dist/` en Vercel/Netlify con las variables `VITE_*` de producción.
+## 5. Trabajo pendiente en `port-eta-dashboard`
 
----
+1. Crear rama de integracion en el repo principal.
+2. Copiar codigo frontend BL hacia `src/features/bl-tracker`.
+3. Crear `src/pages/BlTracker.tsx` a partir de `src/App.tsx` de este repo.
+4. Agregar ruta protegida `/bl-tracker` en `src/App.tsx` del repo principal.
+5. Agregar boton superior `BL Tracker` en el dashboard ETA.
+6. Reemplazar cliente Supabase propio por el cliente compartido del repo principal.
+7. Quitar login propio de BL Tracker.
+8. Scopear CSS bajo `.bl-tracker`.
+9. Copiar migraciones BL al repo principal y ejecutarlas en ambiente dev/staging.
+10. Copiar y desplegar `process-bl-batch` en el Supabase principal.
+11. Validar que ETAs no tenga regresiones.
+12. Validar flujo BL completo: crear lote, procesar, guardar resultado/error y exportar.
 
-## 4. Limitaciones conocidas / mejoras siguientes (no bloqueantes)
+## 6. Supabase pendiente
 
-- **Avance en vivo del worker**: hoy el frontend invoca y recarga la lista; el progreso item a item
-  no se ve en tiempo real. Mejora: suscripción **Supabase Realtime** a `items_consulta`/`lotes_consulta`.
-- **Worker y tiempo de Edge Function**: lotes grandes se procesan en bloques de `MAX_ITEMS_POR_INVOCACION`.
-  Para volumen alto y pausas largas, evaluar mover el worker a **Railway** (proceso persistente).
-- **Cancelar durante el procesamiento real**: en modo supabase la cancelación marca el lote, pero el
-  worker no consulta una señal de cancelación a mitad de corrida. Mejora: chequear `cancel_requested_at`
-  dentro del loop del worker.
-- **Parser duplicado**: `src/lib/aduanas-parser.ts` y `supabase/functions/_shared/aduanas-parser.ts`
-  son espejos (Deno no comparte el `src/` del frontend al empaquetar). Mantener sincronizados.
-- **Presupuesto**: definir tope mensual antes de activar worker persistente (Railway).
+En el mismo proyecto Supabase del dashboard principal se deben agregar los objetos BL:
 
----
+- `profiles` si no existe una tabla equivalente.
+- `fuentes_consulta`.
+- `lotes_consulta`.
+- `items_consulta`.
+- `resultados_aduana`.
+- `errores_consulta`.
+- `logs_html_consulta`.
+- Funcion `purgar_expirados()`.
+- Edge Function `process-bl-batch`.
 
-## 5. Resumen para decisión
+Antes de aplicar migraciones, revisar posibles conflictos con:
 
-- **Listo para usar ya**: frontend en modo demo (desplegable para validar UI con el negocio).
-- **Listo en código, requiere tus credenciales/proyecto**: toda la integración Supabase (datos + auth)
-  y la invocación del worker. Es "encender y configurar".
-- **Requiere validación con red real**: el scraping de Aduanas (conexión 3). Es el único punto que
-  no se puede cerrar sin acceso al sitio desde la red de producción.
+- `public.profiles`.
+- enum `user_role`.
+- funcion `public.is_admin()`.
+- extension `pg_cron`.
+
+Si hay conflicto, prefijar objetos BL, por ejemplo `bl_user_role` o `bl_is_admin()`.
+
+## 7. Validacion contra Aduanas
+
+Sigue pendiente validar en red real:
+
+- Respuesta de `https://isidora.aduana.cl` desde la red donde corre `process-bl-batch`.
+- Lectura dinamica de `CON_ConsultaGralMFTOpageCode`.
+- Campos POST reales: `EdNroManifiesto`, `EdNroGuia`, `CON_ConsultaGralMFTOpageCode`, `EventSource`, `EventName`, `totalManifiestos`.
+- Comportamiento ante 403, timeout, sin resultado y cambio de formulario.
+
+No se debe evadir captcha, bloqueo, geolocalizacion, autenticacion ni reglas del sitio externo.
+
+## 8. Resumen para decision
+
+- **No desplegar** `bl-traker` como app separada.
+- **No pedir segundo login** al usuario.
+- **Migrar codigo** al primer repo como feature interna.
+- **Usar el mismo Supabase** y el mismo sistema de autenticacion del dashboard ETA.
+- **Mantener este repo** como fuente de migracion y respaldo hasta que el modulo interno quede validado.
