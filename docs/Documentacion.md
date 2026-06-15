@@ -1,17 +1,46 @@
-# KPO BL Tracker - Documentacion Canonica
+# KPO BL Tracker - Documentacion canonica
 
-Fuente original consolidada desde Google Docs: Proyecto - Plataforma de Consultas Aduana Chile, actualizado al 2026-06-11.
+Fecha de actualizacion: 2026-06-15
+Decision vigente: **KPO BL Tracker debe migrarse como modulo interno de `Kpo-services/port-eta-dashboard`**. Este repo queda como fuente de codigo, referencia tecnica y respaldo, no como app productiva independiente.
 
-## Resumen
+Plan detallado vigente:
 
-KPO BL Tracker es un sistema web interno para consultas masivas controladas de BL maritimos. El usuario autorizado carga una lista de BLs, valida datos, crea un lote, inicia manualmente el procesamiento, revisa estados y exporta resultados a Excel.
+```text
+docs/PLAN-MIGRACION-A-PORT-ETA-DASHBOARD.md
+```
+
+## 1. Resumen
+
+KPO BL Tracker es un modulo web interno para consultas masivas controladas de BL maritimos. El usuario autorizado carga una lista de BL, valida datos, crea un lote, inicia manualmente el procesamiento, revisa estados y exporta resultados a Excel.
 
 El MVP busca reducir busquedas manuales repetitivas, mejorar trazabilidad, consolidar resultados y registrar errores sin ejecutar scraping agresivo ni intentar evadir bloqueos, captcha, autenticacion o restricciones del sitio externo.
 
-## Alcance incluido
+## 2. Arquitectura objetivo
 
-- Login con Supabase Auth.
-- Roles simples: admin y usuario.
+La arquitectura final ya no considera desplegar este repo como segunda aplicacion. El modulo debe vivir dentro de `port-eta-dashboard`:
+
+```text
+Kpo-services/port-eta-dashboard
+  /
+  /bl-tracker
+```
+
+El usuario debe iniciar sesion una sola vez en el dashboard principal y acceder a BL Tracker sin autenticacion adicional.
+
+Componentes esperados:
+
+- Frontend principal: `Kpo-services/port-eta-dashboard`.
+- Ruta BL: `/bl-tracker`.
+- Auth: `AuthProvider` y `AuthGuard` existentes del dashboard principal.
+- Cliente Supabase: cliente central de `port-eta-dashboard`.
+- Base de datos: mismo proyecto Supabase usado por el dashboard ETA.
+- Worker BL: Edge Function `process-bl-batch` desplegada en ese mismo Supabase.
+
+## 3. Alcance incluido
+
+- Acceso desde el dashboard ETA por boton superior `BL Tracker`.
+- Ruta protegida `/bl-tracker` sin segundo login.
+- Roles simples para BL: `admin` y `usuario`.
 - Carga manual por pegado y archivo CSV/Excel/TXT.
 - Limite inicial de 100 registros por lote.
 - Validacion de vacios, formato basico y duplicados.
@@ -26,42 +55,72 @@ El MVP busca reducir busquedas manuales repetitivas, mejorar trazabilidad, conso
 - Registro de errores y logs HTML con retencion temporal de 1 dia.
 - Logs tecnicos visibles solo para administrador.
 
-## Alcance no incluido
+## 4. Alcance no incluido
 
+- Despliegue independiente de `bl-traker` como segunda app.
+- Segundo login para BL Tracker.
+- Integracion por iframe.
 - Scraping agresivo.
 - Evasion de captcha, bloqueo, geolocalizacion o reglas de acceso.
 - Consulta masiva sin pausas.
 - App movil, marketplace o fuentes aereas/terrestres dentro del MVP inmediato.
 - Procesamiento garantizado de miles de registros en primera etapa.
 
-## Flujo principal
+## 5. Flujo principal
 
-1. Usuario inicia sesion.
-2. Usuario pega BLs o carga archivo.
-3. Sistema normaliza y valida registros.
-4. Sistema separa validos, invalidos y duplicados.
-5. Usuario crea lote.
-6. Usuario inicia manualmente el procesamiento.
-7. Worker consulta Aduanas de forma secuencial con pausas.
-8. Sistema guarda resultado vigente o error por item.
-9. Usuario revisa dashboard y detalle.
-10. Usuario exporta Excel segun filtros aplicados.
+1. Usuario inicia sesion en `port-eta-dashboard`.
+2. Usuario abre `/bl-tracker` desde el boton superior.
+3. Usuario pega BL o carga archivo.
+4. Sistema normaliza y valida registros.
+5. Sistema separa validos, invalidos y duplicados.
+6. Usuario crea lote.
+7. Usuario inicia manualmente el procesamiento.
+8. Worker `process-bl-batch` consulta Aduanas de forma secuencial con pausas.
+9. Sistema guarda resultado vigente o error por item.
+10. Usuario revisa dashboard, cola y detalle.
+11. Usuario exporta Excel segun filtros aplicados.
 
-## Roles
+## 6. Roles
 
-Administrador: crea usuarios, ve logs tecnicos, exporta resultados, reintenta consultas y revisa soporte operativo.
+Administrador BL:
 
-Usuario autorizado: carga datos, crea lotes, ejecuta y reintenta consultas, exporta resultados y no ve logs tecnicos.
+- Ve logs tecnicos.
+- Exporta resultados.
+- Reintenta consultas.
+- Revisa soporte operativo.
+- Puede administrar perfiles BL si se habilita UI para ello.
 
-## Estados
+Usuario autorizado:
 
-Lote: borrador, validado, en_cola, procesando, completado, completado_con_errores, cancelado, fallido.
+- Carga datos.
+- Crea lotes.
+- Ejecuta y reintenta consultas.
+- Exporta resultados.
+- No ve logs tecnicos.
 
-Item: pendiente, validado, omitido_duplicado, en_proceso, exitoso, sin_resultado, error_temporal, error_permanente, agotado_por_reintentos, cancelado.
+En la primera integracion, los roles BL pueden mantenerse en `public.profiles`. Si el dashboard principal incorpora roles compartidos, se debe unificar la fuente de verdad.
 
-Fuente: activa, en_revision, inactiva.
+## 7. Estados
 
-## Fuente Aduanas maritima confirmada
+Lote:
+
+```text
+borrador, validado, en_cola, procesando, completado, completado_con_errores, cancelado, fallido
+```
+
+Item:
+
+```text
+pendiente, validado, omitido_duplicado, en_proceso, exitoso, sin_resultado, error_temporal, error_permanente, agotado_por_reintentos, cancelado
+```
+
+Fuente:
+
+```text
+activa, en_revision, inactiva
+```
+
+## 8. Fuente Aduanas maritima confirmada
 
 URL confirmada:
 
@@ -71,106 +130,179 @@ https://isidora.aduana.cl/WebManifiestoMaritimo/Consultas/CON_BlsxMFTO.jsp?Actio
 
 Metodo observado: POST.
 
-Campos de formulario observados: EdNroManifiesto, EdNroGuia, CON_ConsultaGralMFTOpageCode, EventSource, EventName y totalManifiestos.
+Campos de formulario observados:
 
-CON_ConsultaGralMFTOpageCode no debe tratarse como constante. Debe leerse dinamicamente desde el formulario inicial antes de consultar.
+- `EdNroManifiesto`.
+- `EdNroGuia`.
+- `CON_ConsultaGralMFTOpageCode`.
+- `EventSource`.
+- `EventName`.
+- `totalManifiestos`.
 
-Cookies observadas: AWSALB, AWSALBCORS, AWSALBTG, AWSALBTGCORS y JSESSIONID. No deben exponerse en frontend ni guardarse completas en logs visibles.
+`CON_ConsultaGralMFTOpageCode` no debe tratarse como constante. Debe leerse dinamicamente desde el formulario inicial antes de consultar.
 
-## Campos maritimos a extraer
+Cookies observadas: `AWSALB`, `AWSALBCORS`, `AWSALBTG`, `AWSALBTGCORS` y `JSESSIONID`. No deben exponerse en frontend ni guardarse completas en logs visibles.
 
-Datos de manifiesto: Nro. Manifiesto, Nave, Sentido, Fecha Arribo/Zarpe Estimado, Cia Naviera y Fecha Emision Manifiesto.
+## 9. Campos maritimos a extraer
 
-Datos de BL: Nro BL, Emisor, Fecha de Emision, Fecha de Aceptacion, Fecha de Embarque, Almacen, Puerto Embarque, Puerto Desembarque, Ultimo Transbordo y Total Peso.
+Datos de manifiesto:
 
-Ejemplo confirmado para MEDUWU951960: manifiesto 271842, nave MSC TIANPING, sentido INGRESO, fecha estimada 21/06/2026 23:00, cia naviera MSC CHILE S.A., almacen SAN ANTONIO TERMINAL INTERNACIONAL S.A., puerto embarque Ningbo, puerto desembarque San Antonio y total peso 18274.3.
+- Nro. Manifiesto.
+- Nave.
+- Sentido.
+- Fecha Arribo/Zarpe Estimado.
+- Cia Naviera.
+- Fecha Emision Manifiesto.
 
-## Modelo de datos recomendado
+Datos de BL:
 
-Tablas: profiles, fuentes_consulta, lotes_consulta, items_consulta, resultados_aduana, errores_consulta y logs_html_consulta.
+- Nro BL.
+- Emisor.
+- Fecha de Emision.
+- Fecha de Aceptacion.
+- Fecha de Embarque.
+- Almacen.
+- Puerto Embarque.
+- Puerto Desembarque.
+- Ultimo Transbordo.
+- Total Peso.
 
-Reglas clave: resultados_aduana debe tener indice unico por tipo_consulta + identificador_normalizado; el resultado vigente reemplaza al anterior; errores y logs HTML expiran despues de 1 dia; no se guardan secretos ni cookies completas en campos visibles.
+Ejemplo confirmado para `MEDUWU951960`: manifiesto `271842`, nave `MSC TIANPING`, sentido `INGRESO`, fecha estimada `21/06/2026 23:00`, cia naviera `MSC CHILE S.A.`, almacen `SAN ANTONIO TERMINAL INTERNACIONAL S.A.`, puerto embarque `Ningbo`, puerto desembarque `San Antonio` y total peso `18274.3`.
 
-## Reintentos
+## 10. Modelo de datos recomendado
 
-Cada item tiene maximo 10 intentos. Al llegar a 10 sin exito queda como agotado_por_reintentos.
+Tablas BL en el mismo Supabase del dashboard ETA:
 
-Errores reintentables: timeout, 403 temporal, 5xx, conexion fallida, respuesta incompleta o fuente temporalmente no disponible.
+- `profiles`.
+- `fuentes_consulta`.
+- `lotes_consulta`.
+- `items_consulta`.
+- `resultados_aduana`.
+- `errores_consulta`.
+- `logs_html_consulta`.
 
-Errores no reintentables automaticamente: BL vacio, formato invalido, captcha, bloqueo con intervencion humana, cambio de formulario, parser roto o respuesta incompatible.
+Reglas clave:
 
-## Exportacion Excel
+- `resultados_aduana` debe tener indice unico por `tipo_consulta + identificador_normalizado`.
+- El resultado vigente reemplaza al anterior.
+- Errores y logs HTML expiran despues de 1 dia.
+- No se guardan secretos ni cookies completas en campos visibles.
+- Logs HTML visibles solo para admin.
 
-Hoja Resultados: Lote, Fecha consulta, Estado item, Nro BL, Nro Manifiesto, Nave, Sentido, Fecha Arribo/Zarpe Estimado, Cia Naviera, Fecha Emision Manifiesto, Emisor BL, Fecha Emision BL, Fecha Aceptacion, Fecha Embarque, Almacen, Puerto Embarque, Puerto Desembarque, Ultimo Transbordo, Total Peso, Fuente, Intentos y Error Resumen.
+Antes de ejecutar migraciones en el Supabase principal, revisar conflictos con objetos existentes: `profiles`, `user_role`, `is_admin()` y `pg_cron`.
 
-Hoja Errores: Lote, Identificador Original, Identificador Normalizado, Estado, Tipo Error, Mensaje Usuario, Status HTTP, Intento Actual, Max Intentos y Fecha Error.
+## 11. Reintentos
+
+Cada item tiene maximo 10 intentos. Al llegar a 10 sin exito queda como `agotado_por_reintentos`.
+
+Errores reintentables:
+
+- Timeout.
+- 403 temporal.
+- 5xx.
+- Conexion fallida.
+- Respuesta incompleta.
+- Fuente temporalmente no disponible.
+
+Errores no reintentables automaticamente:
+
+- BL vacio.
+- Formato invalido.
+- Captcha.
+- Bloqueo con intervencion humana.
+- Cambio de formulario.
+- Parser roto.
+- Respuesta incompatible.
+
+## 12. Exportacion Excel
+
+Hoja `Resultados`:
+
+- Lote.
+- Fecha consulta.
+- Estado item.
+- Nro BL.
+- Nro Manifiesto.
+- Nave.
+- Sentido.
+- Fecha Arribo/Zarpe Estimado.
+- Cia Naviera.
+- Fecha Emision Manifiesto.
+- Emisor BL.
+- Fecha Emision BL.
+- Fecha Aceptacion.
+- Fecha Embarque.
+- Almacen.
+- Puerto Embarque.
+- Puerto Desembarque.
+- Ultimo Transbordo.
+- Total Peso.
+- Fuente.
+- Intentos.
+- Error Resumen.
+
+Hoja `Errores`:
+
+- Lote.
+- Identificador Original.
+- Identificador Normalizado.
+- Estado.
+- Tipo Error.
+- Mensaje Usuario.
+- Status HTTP.
+- Intento Actual.
+- Max Intentos.
+- Fecha Error.
 
 La exportacion desde dashboard debe respetar filtros aplicados.
 
 Exportacion de validacion previa: el usuario puede exportar el preview de carga antes de crear lote. El archivo incluye hojas `Validos`, `Duplicados`, `Invalidos` y `Resumen`.
 
-## Arquitectura
+## 13. Avance de codigo en este repo
 
-Frontend: React + Vite + TypeScript. Auth y datos: Supabase. Deploy web/API liviana: Vercel. Worker largo o persistente: Railway si el volumen/pausas lo justifican. El worker debe quedar desacoplado para poder mover procesamiento sin rehacer dashboard.
+Este repo ya contiene:
 
-## Avance sin infraestructura - 2026-06-12
+- UI funcional en modo demo.
+- Componentes principales de BL Tracker.
+- Validacion e importacion de archivos.
+- Cola local y exportacion Excel.
+- `SupabaseBatchRepository`.
+- Invocacion de worker desde `process-client.ts`.
+- Migraciones SQL `001`, `002` y `003`.
+- Edge Function `process-bl-batch`.
+- Parser Aduanas compartido.
 
-Se adelanto desarrollo que no depende de Supabase ni despliegue:
+## 14. Pendientes reales
 
-- Separacion modular de tipos, validacion, importacion, cola local, formato, exportacion y datos demo.
-- Separacion de `src/App.tsx` en componentes fisicos para login, cabecera, carga, filtros, tabla, cola, admin, detalle, fuentes y resumen.
-- Interfaz `BatchRepository` con implementacion local para preparar el reemplazo futuro por Supabase.
-- Carga real de archivos `.xlsx`, `.xls`, `.csv`, `.txt` y `.tsv` en modo local.
-- Preview de carga con validos, duplicados, invalidos y truncamiento por limite de 100 registros.
-- Exportacion Excel del preview de carga con hojas `Validos`, `Duplicados`, `Invalidos` y `Resumen`.
-- Cola local con progreso, cancelacion, reintento de fallidos y maximo de 10 intentos por item.
-- Filtros ampliados por busqueda, estado, puerto y rango de fechas.
-- Panel admin demo con usuarios y logs tecnicos para preparar permisos por rol.
-- Exportacion Excel aislada en modulo propio para facilitar pruebas y conexion posterior.
-- Pruebas unitarias adicionales de validacion, importacion y motor de lote.
-- Pruebas iniciales de componentes para cabecera, preview de carga, tabla y modal de detalle.
-- Prueba de workbook para exportacion Excel del preview.
-- Mejoras iniciales de accesibilidad en navegacion, botones iconicos, estados vacios y modal de detalle.
+Los pendientes ahora se ejecutan principalmente en el repo `port-eta-dashboard`:
 
-Este avance mantiene modo demo y no reemplaza la integracion real pendiente con Supabase, worker y Aduanas. Los pasos externos estan documentados en `docs/Pendientes-infraestructura.md`.
+- Migrar frontend como feature interna.
+- Reutilizar auth y cliente Supabase del dashboard principal.
+- Scopear CSS.
+- Copiar migraciones al repo principal.
+- Ejecutar migraciones en el Supabase compartido.
+- Desplegar `process-bl-batch` en el Supabase compartido.
+- Validar red real contra Aduanas.
+- Confirmar tiempos promedio por consulta y pausa minima segura para 100 registros.
+- Validar si 403 depende de VPN, localidad, IP, red, cookies, headers u horario.
+- Agregar fixtures completos reales: `01-403-Forbidden.html`, `02-Manifiestos-x-BLs-sin-datos.html`, `03-Manifiestos-x-BLs.html`.
+- Confirmar comportamiento exacto de BL inexistente posterior a una busqueda real.
 
-## Avance de integracion - 2026-06-13
+## 15. Criterios de aceptacion MVP
 
-Se adelanto el CODIGO de la integracion real (queda pendiente solo el setup externo y la validacion contra el sitio):
-
-- `SupabaseBatchRepository` que implementa la misma interfaz `BatchRepository` (la UI no cambia) y un selector por `VITE_AUTH_MODE` (demo -> localStorage, supabase -> Supabase).
-- Autenticacion real (`auth.ts`): `signIn`/`signOut`, rehidratacion de sesion y resolucion de rol desde `profiles`; `Login` hace login real en modo supabase.
-- Invocacion del worker desde "Procesar" en modo supabase (`process-client.ts`).
-- Worker `supabase/functions/process-bl-batch` reescrito: procesamiento secuencial con pausas, lectura dinamica de `pageCode`, cookies de sesion solo en backend, parser compartido y escritura de resultado/error/log con `service_role`. No evade restricciones. Requiere validacion con la red real.
-- Migracion `002_escritura_cliente_y_auth.sql`: politicas de escritura del cliente (UPDATE de lotes/items, INSERT de items), dueno automatico del lote y auto-creacion de `profiles` al registrarse.
-- Migracion `003_limpieza_retencion.sql`: funcion `purgar_expirados()` + agenda diaria con pg_cron.
-- Mejoras de bundle (code-splitting de exceljs), `VITE_PROCESSING_PAUSE_MS` respetado y guard de cuota en localStorage.
-
-El mapa completo de conexiones y lo que falta por conectar esta en `docs/CONEXIONES-PENDIENTES.md`.
-
-## Criterios de aceptacion MVP
-
-- Usuario autorizado puede iniciar sesion.
+- Usuario autorizado inicia sesion una sola vez en `port-eta-dashboard`.
+- Usuario entra a `/bl-tracker` sin segundo login.
 - Usuario carga o pega hasta 100 BL maritimos.
 - Sistema valida vacios, formato y duplicados.
 - Usuario crea lote valido.
-- Procesamiento se inicia manualmente y muestra progreso.
+- Procesamiento se inicia manualmente.
 - Consulta exitosa guarda/reemplaza resultado vigente.
 - 403, timeout, sin resultado y parser roto quedan registrados sin romper lote.
 - Ningun item supera 10 intentos.
 - Todos los usuarios autorizados pueden reintentar y exportar.
-- Solo admin puede ver logs y crear usuarios.
+- Solo admin puede ver logs.
 - Dashboard filtra por BL, manifiesto, nave, puerto, fecha y estado.
 - Excel contiene columnas definidas y hoja de errores cuando aplica.
 - Logs HTML y errores tecnicos expiran o se limpian despues de 1 dia.
 - La app no intenta evadir restricciones del sitio externo.
-
-## Pendientes reales
-
-- Confirmar tiempos promedio por consulta y pausa minima segura para 100 registros.
-- Definir presupuesto mensual maximo antes de activar Railway.
-- Definir desde que red/ubicacion correra el worker de produccion.
-- Validar si 403 depende de VPN, localidad, IP, red, cookies, headers u horario.
-- Implementar limpieza automatica diaria de errores y logs.
-- Agregar fixtures completos reales: 01-403-Forbidden.html, 02-Manifiestos-x-BLs-sin-datos.html, 03-Manifiestos-x-BLs.html.
-- Confirmar comportamiento exacto de BL inexistente posterior a una busqueda real.
+- Dashboard ETA sigue funcionando sin regresion.
